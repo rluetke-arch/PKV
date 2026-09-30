@@ -1,0 +1,934 @@
+<!doctype html>
+<html lang="de" class="standalone-doc">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Belegbuch">
+<meta name="theme-color" content="#0A1426">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<!--APP-START-->
+<title>PKV Belegbuch</title>
+<style>
+/* Layout: dunkle Glas-Optik wie eine iOS-App – große Begrüßung, Verlaufskarte mit der Empfehlung, Glas-Kacheln, schwebende Tab-Leiste. */
+:root{
+  --bg:#0A1426; --bg-2:#131C3A; --bg-3:#1D1840;
+  --surface:rgba(255,255,255,.075); --surface-2:rgba(255,255,255,.05); --sheet:#111B31; --line:rgba(255,255,255,.12);
+  --ink:#F3F6FB; --muted:rgba(226,233,245,.64); --faint:rgba(226,233,245,.42);
+  --accent:#4DA3FF; --accent-ink:#FFFFFF; --accent-soft:rgba(77,163,255,.18);
+  --hero-1:#3E8BEF; --hero-2:#57A9DB; --hero-3:#6B68E6;
+  --good:#44D07E; --good-soft:rgba(68,208,126,.17); --warn:#F5A33B; --warn-soft:rgba(245,163,59,.17); --bad:#FF7A6E; --bad-soft:rgba(255,122,110,.17);
+  --violet:#9A8FF7; --violet-soft:rgba(154,143,247,.2); --stamp:#8CB8FF; --stamp-soft:rgba(140,184,255,.15);
+  --shadow:0 12px 32px rgba(0,0,0,.3);
+  --f-body:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Roboto,'Helvetica Neue',sans-serif;
+  --f-display:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Roboto,'Helvetica Neue',sans-serif;
+  --f-mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  --r:22px; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg) linear-gradient(165deg,var(--bg) 0%,var(--bg-2) 55%,var(--bg-3) 100%) fixed;color:var(--ink);font:16px/1.45 var(--f-body);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;min-height:100vh}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:var(--f-mono)}
+.glass,.card,.tile,.list,.steps,.todo{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}
+.app{max-width:560px;margin:0 auto;padding-bottom:calc(112px + env(safe-area-inset-bottom,0px))}
+/* Kopf */
+.topbar{padding:14px 20px 4px;display:flex;gap:14px;align-items:flex-start}
+.standalone-doc .topbar{padding-top:calc(env(safe-area-inset-top,0px) + 14px)}
+.hello{flex:1;min-width:0}
+.hello h1{margin:0;font:800 34px/1.1 var(--f-display);letter-spacing:-.02em;text-wrap:balance}
+.hello .lead{margin:8px 0 0;font:700 19px/1.25 var(--f-display)}
+.hello .sublead{margin:4px 0 0;color:var(--muted);font-size:15px}
+.appicon{width:58px;height:58px;border-radius:16px;box-shadow:var(--shadow);flex:none}
+.controls{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 20px 4px}
+.yearsw{display:flex;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:999px}
+.yearsw button{border:0;background:none;width:38px;height:36px;font-size:20px;color:var(--muted)}
+.yearsw button:disabled{opacity:.3}
+.yearsw span{font-weight:700;min-width:48px;text-align:center;font-variant-numeric:tabular-nums}
+.chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 12px;font-size:13px;color:var(--muted);white-space:nowrap}
+.chip .dot{width:8px;height:8px;border-radius:50%;background:var(--faint)}
+.chip.ok .dot{background:var(--good)} .chip.warn .dot{background:var(--warn)} .chip.err .dot{background:var(--bad)}
+main{padding:10px 20px 24px;display:flex;flex-direction:column;gap:16px}
+h2{font:700 20px var(--f-display);margin:8px 0 0;letter-spacing:-.01em}
+.eyebrow{font-size:13px;font-weight:600;color:var(--muted)}
+.card{padding:18px}
+.muted{color:var(--muted)}
+.small{font-size:13.5px}
+.banner{border-radius:var(--r);padding:14px 16px;background:var(--warn-soft);border:1px solid rgba(245,163,59,.35);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.banner p{margin:0;flex:1 1 220px;font-size:14.5px}
+/* Verlaufskarte (Empfehlung) */
+.hero{border-radius:28px;padding:22px 20px;color:#fff;background:linear-gradient(125deg,var(--hero-1) 0%,var(--hero-2) 50%,var(--hero-3) 100%);box-shadow:var(--shadow);display:flex;flex-direction:column;gap:14px}
+.hero .head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.hero .lbl{font-size:17px;font-weight:500;color:rgba(255,255,255,.92)}
+.hero h3{margin:6px 0 0;font:800 34px/1.05 var(--f-display);letter-spacing:-.02em;text-wrap:balance}
+.hero .side{text-align:right;white-space:nowrap}
+.hero .side b{display:block;font:800 30px/1 var(--f-display);font-variant-numeric:tabular-nums}
+.hero .side span{font-size:15px;color:rgba(255,255,255,.88)}
+.hero p{margin:0;font-size:15.5px;color:rgba(255,255,255,.92)}
+.hero .note{font-size:14px;color:rgba(255,255,255,.78)}
+.cmp{display:grid;gap:10px}
+.cmp .row{display:grid;grid-template-columns:1fr auto;gap:5px 10px;font-size:14px}
+.bar{grid-column:1/-1;height:8px;border-radius:99px;background:rgba(255,255,255,.22);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px;background:#fff}
+.hero .btn{background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.35);color:#fff}
+/* Symbole */
+.ico{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;flex:none}
+.ico svg{width:22px;height:22px}
+.ico.orange{background:var(--warn-soft);color:var(--warn)} .ico.blue{background:var(--accent-soft);color:var(--accent)} .ico.violet{background:var(--violet-soft);color:var(--violet)} .ico.green{background:var(--good-soft);color:var(--good)} .ico.red{background:var(--bad-soft);color:var(--bad)}
+.ico.plain{width:26px;height:26px;border-radius:0;background:none}
+.ico.plain svg{width:24px;height:24px}
+/* Zu erledigen */
+.todo{padding:18px 18px 8px}
+.todo .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.todo .top b{font:700 22px var(--f-display)}
+.todo .top span{font-size:22px;color:var(--muted);font-variant-numeric:tabular-nums}
+.trow{display:flex;align-items:center;gap:14px;width:100%;border:0;background:none;padding:9px 0;text-align:left;font-size:17px}
+.trow .n{font-variant-numeric:tabular-nums}
+.trow.zero{color:var(--muted)}
+/* Kacheln */
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tile{padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.tile .th{display:flex;align-items:center;gap:10px;font:700 16px var(--f-display);min-width:0}
+.tile .th .ico{width:36px;height:36px;border-radius:11px}
+.tile .th>span:last-child{overflow-wrap:anywhere}
+.tile dl{margin:0;display:grid;grid-template-columns:1fr auto;gap:8px 8px;font-size:14.5px}
+.tile dt{color:var(--muted)} .tile dd{margin:0;text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.meter{height:6px;border-radius:99px;background:rgba(255,255,255,.1);overflow:hidden}
+.meter i{display:block;height:100%;border-radius:99px;background:var(--accent)}
+.meter.green i{background:var(--good)} .meter.violet i{background:var(--violet)} .meter.warn i{background:var(--warn)}
+.wide{display:flex;align-items:center;gap:14px;padding:16px 18px;width:100%;text-align:left;color:var(--ink)}
+.wide .main{flex:1;min-width:0}
+.wide .t{font:700 18px var(--f-display);display:block}
+.wide .sub{color:var(--muted);font-size:14px;display:block}
+.wide .big{font:700 22px var(--f-display);font-variant-numeric:tabular-nums;white-space:nowrap}
+.allclear{display:flex;flex-direction:column;align-items:center;gap:10px;padding:26px 18px;text-align:center}
+.allclear b{font:700 20px var(--f-display)}
+/* Listen */
+.list{display:flex;flex-direction:column;overflow:hidden}
+.item{display:flex;gap:12px;align-items:center;padding:13px 16px;border-top:1px solid var(--line);background:none;border-left:0;border-right:0;border-bottom:0;text-align:left;width:100%}
+.item:first-child{border-top:0}
+.item .main{flex:1;min-width:0;display:block}
+.item .t,.item .sub{display:block}
+.item .t{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .sub{font-size:13px;color:var(--muted)}
+.item .r{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+.item .a{font-weight:600;font-variant-numeric:tabular-nums}
+.glyph{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font:700 12px var(--f-body);letter-spacing:.03em;flex:none;background:var(--warn-soft);color:var(--warn)}
+.glyph.v{background:var(--good-soft);color:var(--good)} .glyph.z{background:var(--accent-soft);color:var(--accent)} .glyph.k{background:var(--violet-soft);color:var(--violet)} .glyph.d{background:var(--surface-2);color:var(--muted)}
+.stamps{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.stamp{font:700 10px/1 var(--f-body);letter-spacing:.07em;text-transform:uppercase;border-radius:6px;padding:4px 6px;white-space:nowrap}
+.stamp.open{color:var(--bad);background:var(--bad-soft)} .stamp.paid{color:var(--muted);background:var(--surface-2)} .stamp.sub{color:var(--stamp);background:var(--stamp-soft)} .stamp.ref{color:var(--good);background:var(--good-soft)} .stamp.safe{color:var(--good);background:var(--good-soft)}
+.empty{padding:24px 16px;text-align:center;color:var(--muted);font-size:15px}
+.filters{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.filters::-webkit-scrollbar{display:none}
+.fbtn{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 14px;font-size:14px;white-space:nowrap}
+.fbtn[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:600}
+.search{width:100%;border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:12px 14px}
+.search::placeholder{color:var(--faint)}
+.month{font-size:13px;font-weight:600;color:var(--muted);padding:6px 4px 0}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:11px 16px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.danger{color:var(--bad)}
+.btn.ghost{background:transparent}
+.btn.sm{min-height:36px;padding:7px 12px;font-size:14px;border-radius:12px}
+.btn:disabled{opacity:.5}
+.row-btns{display:flex;gap:8px;flex-wrap:wrap}
+.row-btns .btn{flex:1 1 140px}
+/* Schwebende Tab-Leiste */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;padding:0 14px calc(10px + env(safe-area-inset-bottom,0px));pointer-events:none}
+.tabbar .in{pointer-events:auto;max-width:540px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);gap:2px;padding:6px;border-radius:34px;background:rgba(24,34,60,.78);border:1px solid var(--line);-webkit-backdrop-filter:blur(22px) saturate(1.4);backdrop-filter:blur(22px) saturate(1.4);box-shadow:var(--shadow)}
+.tab{border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:12px;color:var(--ink);padding:8px 0 6px;border-radius:28px}
+.tab svg{width:26px;height:26px}
+.tab[aria-current="page"]{background:rgba(255,255,255,.1);color:var(--accent)}
+/* Sheet */
+.overlay{position:fixed;inset:0;z-index:50;background:rgba(3,8,18,.62);display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--sheet);border:1px solid var(--line);border-bottom:0;width:100%;max-width:560px;max-height:92%;border-radius:26px 26px 0 0;display:flex;flex-direction:column;overflow:hidden}
+.sheet header{display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid var(--line)}
+.sheet header h3{flex:1;margin:0;font:700 19px var(--f-display);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sheet .body{overflow-y:auto;padding:16px 18px calc(26px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px;-webkit-overflow-scrolling:touch}
+.x{border:0;background:var(--surface);width:36px;height:36px;border-radius:50%;font-size:20px;color:var(--muted);flex:none}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:13px;color:var(--muted);font-weight:600}
+.field input,.field select,.field textarea{border:1px solid var(--line);background:rgba(255,255,255,.06);border-radius:12px;padding:11px 12px;min-height:46px;width:100%}
+.field textarea{min-height:70px;resize:vertical}
+select option{background:var(--sheet)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hint{font-size:14px;border-radius:14px;padding:11px 13px;background:var(--surface-2);border:1px solid var(--line)}
+.hint.good{background:var(--good-soft);border-color:transparent}
+.hint.warn{background:var(--warn-soft);border-color:transparent}
+.steps{display:flex;flex-direction:column}
+.step{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;padding:11px 14px;border-top:1px solid var(--line)}
+.step:first-child{border-top:0}
+.check{width:28px;height:28px;border-radius:9px;border:1.5px solid var(--line);background:var(--surface-2);display:grid;place-items:center;padding:0;color:#fff}
+.check[aria-pressed="true"]{background:var(--accent);border-color:var(--accent)}
+.step input{border:1px solid var(--line);border-radius:10px;padding:7px 9px;background:rgba(255,255,255,.06);width:150px;max-width:100%;min-width:0}
+.pages{display:flex;gap:8px;overflow-x:auto}
+.pages img{height:110px;border-radius:10px;border:1px solid var(--line)}
+.progress{height:5px;background:var(--surface);border-radius:9px;overflow:hidden}
+.progress i{display:block;height:100%;background:var(--accent);width:0;transition:width .2s}
+.pdfview canvas{width:100%;height:auto;border-radius:8px;background:#fff;margin-bottom:8px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(104px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:14px;font-size:15px;font-weight:500;z-index:80;max-width:90%;box-shadow:var(--shadow)}
+.kv{margin:0;display:grid;grid-template-columns:1fr auto;gap:8px 12px;font-size:15px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+details.card summary{font-weight:600;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center}
+details.card summary::-webkit-details-marker{display:none}
+details.card summary::after{content:"+";font-size:22px;color:var(--muted)}
+details.card[open] summary::after{content:"–"}
+details.card[open] summary{margin-bottom:14px}
+.pill{font-size:12px;font-weight:600;border-radius:999px;padding:4px 9px;white-space:nowrap}
+.pill.bad{background:var(--bad-soft);color:var(--bad)} .pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.good{background:var(--good-soft);color:var(--good)} .pill.mut{background:var(--surface-2);color:var(--muted)}
+code.sel{font-family:var(--f-mono);font-size:13px;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:block;word-break:break-all;user-select:all}
+.bignum{font:800 30px var(--f-display);font-variant-numeric:tabular-nums}
+input[type=checkbox]{accent-color:var(--accent);width:18px;height:18px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media (max-width:370px){.tiles{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}.hello h1{font-size:30px}.hero h3{font-size:32px}}
+.ico.plain{background:none!important}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="topbar" id="topbar">
+    <div class="hello"><h1 id="hTitle">Hallo</h1><p class="lead" id="hLead">Dein digitales Rechnungsarchiv</p><p class="sublead" id="hSub">Offene Rechnungen, Fristen und Erstattungen auf einen Blick</p></div>
+    <img class="appicon" alt="" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAIAAABt+uBvAAAPOklEQVR4nO1caYwcx3X+XlV195w7s1xyubxkkdRJAwrjwInjQBIQO3b8IweCJEgQB4IRJAbyL/lj5LKQH0oQBwlyGIIR2UJ8UZYUAUkgm7KJiNFBR1IEi4ZEkQLFyyG5B/ec3Tm7u15+9E5PT3fP7Mx0L7kJ92F/dPfUq6r+9n2v3ntd3fTQFxbRFgLAgWNPOHAcOSVwWIW71aMqHDj2WodUIqfdI3YmGT+BviMifJtxEwioiB5q8SNtHjrB9uG5ho6jPfSd8wjoBIdQcWrxI20qOr166Fa5qbbjiYqoxY90uzHLPxVbFJ1bwawoOgDUFvU7t5pZ/mnAB8WNdNsyyxfRZ6TbmVm+utpmFnqces1U7EjbzPJvU0RH2mZW8DbVNrNiJtBRYXWLbWerMstX7+Ri28yKooNeTnpkdIi61an73iii3r6yfm/kj7JxD8Td6u0emFNDB+wBlJ7t2C60ZuLIP3+zmcXrbYSAIePnPAI6iDrpJOhoxs4CFbNC6/UGoR64+18d0/Ng6ETv1lMRhFpTL1a06FhifPtB0FmPg9JCRwqs1fTvfiz/ax/NrtVZCtxk0Rr5LL34g8ZfH6sUskEjHtF2PAkWzBJ6ZRBHVvSbLzwYGb1jXyWCjt+Dn6wmXrO2AjoAUmKWLwJprehhhVsjyW0npCI2JVbeApKQWb6KSBGdLWBA7UhqJGbF3qaIUwvIUOhsBTuKuMLRmOVLu2iP0dHZEoYTkH5pMAZllq+iUkMnsr7echlhzYrWFURALSCJKxiRH9OXPt1SYmb5HkMksZ2e1tctUnSnqWkIAapPsJ6YWX5DheTM6ms7UmC+oq/MO73uZTRhxv4JuacsHR2hSfR4eGb5x30LZiMwq7uBIDgO3p+1m7b3iDI1YeD9GaecE5bRlXYF55CEWb666vyYvDbIYVtihhAwFdWaGiKcgY8sBGjmjCWkoOgN+20CkxyaWeFcLDmzYu2DAUm4f69xbcllr9yVCkgEZuwpS0PBjVDMmwwjEbN8lbiC2fDMitqOP5JmZEy6Z4+R9mpGWrPugU5gkiMyy1eJFMxGYFb/GwGYYTupr/UcuzKmxSy/B5Uus2LdDCP9ZR7tqmT8D4mZ5fegeqgNzKzep74oAVcjvNYkE6L1bsPSniQHTrsUh0EHnYJZMmZRb9uRAnMr+vK8k64NacaBCbl3PDYOSoFZ/qmKqA3NrPWR4gAQBNvB+7N2y4EQabppBi7MOuN5kTFIx3abjFl+DyrVJ8XhmTJDCmRMqrd0bwoOLQRozdmskCISJcZPZER00OWDRmJWTNbTLYJw/17j+pKb8jLGmCpLQ8KNLqO9q18YEh10Fe0xErM6p/EIaIZl0F1TRuyvSURr1nFBRirM8kUhBWah/1ONzYmDBgodEqLjJavJmcW+k+6VcBDF/xQr3CfGGUaSo9NJNeLUupvGjdTVe+9bUgKORvxaEyeCIAV0NMYZRlJBB8FtwN1qG48E33YQVgl2JgVmlvWVeWfwRJWAQ7vVRFHEJqID9dCZVyJ0EN4GPAKz4gb2xYuDLs7ZtgMhBgKIAEfj4qwznjdHQIfSsx20fVBIrbtpnFpX773RQTsOyppUb2mJHjFLtxDB1ZyzhKAhWBnfFZKig2A9CCFEhmVWj7Tei4Oml4eIgyTRnnGZcNlLBZ2eTnoEZvVadDXDNOjQ7uHiIFfzhubGXmjRbse6k3MQOrlxEnTgO+mEzOrvLEaIg/rEOMzQzILIVKSCzxw0QG3FlNBB9KlGWswKSSr1IA+ajCGUItfF9HLr+mLrRsWpNbWSNJ5Xh/eYrmYFEiAdnPqo6ISd9CjMCqlsmrgapoJpiKvz9vG3ll9+p3r+qrO8yrYNL+GQEmN5KhehDdI6U4AJwAVTAnTQnazGq2FAZvVONZKLq7mQFQsV98lv33juVGVmDmbWze9aLR9YUcWqMG12hVvNNZeKs/MlNLMLslqyarspn4fhQg9iBLHooEfBbHjb6e2kk4uHzqmza48+df38FZR3Ng88dNE8fEmOL8NsUXvqzCi4Sq8Wmlf21c/evTQ3UTErU8qaorxup1PDogOO2eU6CjqbJx46T7+6+OixGXKMAz91IfOh07K8zK5kR6FpdhY7AohFcS139Ezm/vONs/esvXH0arPVsJwP0FjIugdEJ1K0x9DMCu/jHPzWB5A2Okt/8rWZfFaMf/yUeeQ9OErXsyBu/3WpsCPZVhA69+NvG/umKycenl8ocaZyECX/Xz04Ouj1Wjh82+kfIkVtJz1rcjUXMuL756qPHpsuZMWOn/9P64NnuZ5hR0LonnZLDKEB6FpWTSyVf+mF3OTiQkNfw5r0H98NjA66dpglY1aoh4TCgKFoYdX9/FPXyDHKD79mHLqkq7l+0HRNhiA0N02RaYx98qRVaM7arSU0VSDdGQQddF7JTMCsaA/JRWu2DHryxRvnL2Pi6AXzyHtcy0JuXAHxJumwKzyMWqYsV4oPvgZXTuuaZqZAsw3RodBr4RiJWYEe0lnqmWEZ4tqC/dypSnlnM/Oh03DUgO5NAwSMq3xNNyUJCM11yzp8OXfoR9WmWKSG9DsaAB0Ed7kiMbPS8tCa2VA4/tbyzBzGjlyU5RW25SDMkiRWnOojUz/7pXt//57cviVnTYBAAFPugXdJ6gXdZHCvPDaKDsKvInSOg2od2fj9rDREELkuXnq7amZd8/Aljy4biiK5ZK/95uSDv7X74V3G2N/d9TsfH/+xFjtEYFsZUzesXQtVmxrkiHWebYwOAk46CbPavacBETMMRTPL9vtXnfyuihhfZkeFxqZIWKpILjlrHxt/4A8O/KJmttkpyuyndvyEzS4RoIkM29o767hUZafLDaEfOtTzVQSMiE5yljFgSFxbbC1V2JqokNkCd/UqSDTZ1mD/OYAkseLUjhYOPnrnbwDQYIPUu7X/+fPL37KEwd4Ldgy1axHEdbihDKkPOgBEOsxKCR149R3CjRXbdqDGqhQsLwOSxJpTP5jZbQnDZodAkkTNbd6R2fnYwU9bwnBZKxLXm4t/dPHrNjsKYl1bk8jXSLo2B5bCjdABe056CzArJPUWawaZdvCiILHkrB3JH3j87s/+8R2/6rJmsK2dosr+1aFHJoyiw64iueLUPnfxa4v2WkaYgaIHkWGTYO0DPgA6CL+KgNFtJ90kQ3mrsSsDQ1NDtz46dt/fHP5MTlo/U7r/sUOfbmjbBf/lwd/+QGaXw1qSsNn9s0vffL8+XZCWy11xE7vSvzsaDB2EC2bJmZWSNe0oKiXhrmU7oxPZrntfbv+YyjnsAvRg6cjn7/x1ZjxQuNNhl0AEeuzKM6+vnt+hCg673bNnrmfYlYb08v+B0OlbMBsenVTSekGkXewpm/kcWktFboeImnVRZp6c+Q8C/d7eT7isNeufGz8KwHPYksQXr33n+MIPdhgRdBgk2F0qsRYWCcGdn/ujg04ctGVsB4Smw/snzAOTsjZX0qsFUq63kGlwWeW+Mn3iievfkyQYcFlrMDNLEk/Pvfr1mZPjRsHhSEZCYC2a05OCOM+q45Y2Qgex3+4YzXZCPog5Zs+ddyV0PXSRAFdz1qIP35uprVjO1X2kHH8CmnncKHx5+sQT09+TJAhwWUsSJ5Z++PdXny+pvI6iw0TKdZfHmjOTWYPzbHh4D4IOvFRjM5ilFJTqusIMpSAFhOjA4V0UAlIGgSMAv/DhcrGAtXfu5pbpL9YAXNYeRv90/buChEHyjcr5v7jyLzlpItaOmciwG+fudmqZcSkNr+gxGDoUehUhITreWsaMQpaOvVBdrenP/kqxWmch4Loo5OjVtxon/7vxuc+UIKAZWqOQpXOX7G88v/aHj5SKOdFymADLoMWK/u4Je/+EvDIzkT17T+7o27qW9Qo9HkZlmf/qzMlztWs7jOLLy2cIEBAcxYeJDNtZGK+eudc0nV16zAWLgdFBVy6W2HaI4bggwsk3G0+fqP77S/XnX6nns2Q7nM/Re5ftLz27eup044nnVjMmaReWSTeW9D9+c+XNd5r/8I0VV3P7fQ5+/NjKf51uFOpZI2Ovvn7UnttJVgu6M1sNLsjMG6vnv73wJoMVyVh0vKrj6isfsRvGlDBzkDwMOh2AUkAHcDWP5cWFq84Xn6lYBhVz9JV/Xf3+D5tjeXFt1vnCPy/Xm3pyXLxwqvbU8bVCjpot/tuvLl+fc6d2yrfebT7+VMUyKZehLz+7+ubbrdIY5diYUhm7pSonHtL1DJlhjPLSKqkcgF7okNVcO/WTtcv7Shbv4ZzLnbRlEHSAyC7XEdFhsIZl0KXrzr+9VHNdmBIMKInHn1lRsvTsier8si5myXZQzItvHa9OjsszF+x3zrfKY8K2uVQQJ1+rT03IXJZeeKVWLgrXAcBTlG9Yzvx8mZ7/xNgnX5TlCjcsfwaaOcbtMHnMAvHayz+9evqDVsY+rEuSO08TB0SHmOmX//RGcnTWDwhagxlKrH+CxbviuiyIVNsNe0M4DoPIUJ0qGxEchwEoSe1B2Wt/WVcWmmzl68WHXrcOXwYT2wo6sm2NAQIpl5TtLI6vvvKR2uV9Vsa+l8fy3A4WhkEHQBdASdDxm3l+mrr/VxRcyNtwrPcfmKj3OhAH0MF6DEHXsDZrt+DK3KEf5R5415iaI8NhBliACWAIJmLW5C6XGufuqp65z24YJYsP6WKW5WjoIPxkNTE6WN+u6C/j3mkgZQws8N0jrl9ENzrtifABFApGc1rWqhfuqF3eb+1aMPfNGhOLIl8jw4YWup51lkut65PN6UmnnjFN5w5T7dE5wTQyOujaYZYGOqF7CzEgyd4vB7wDVonMxWxjQTerc7vq05MgJumSYDCxK1gLQZw1eCpLk3osw1IzcwJ0KO5jt6mhE5KEO+ME4DATsIuzOynTsJwqO3W4NpNmkIAhySKRZ5VnZWjhgkdYs8KfhmIvUNwcdPrEk8OiQ4ErHl+y2sjBWCcmwUsdiFkDGmyDg9nPyOig+2O3W5FZ8SqMru0/60N0loWhYuV2DzHoYINXEbYAs2LRifYwYPVrWHTQKdrHqwE9Tm8ms6Ij4mahQz1fRdiqzIr2sKnoAD2+3bHNLF8l5tsd28wKqvTb5dpn4P/3zPJVRHLb6afyfxwd9CuY3d7M8lVidrn2Gfj2YZY/YmcV23Dg24pZ/iTVNrP6oIOu7wdtM6trxHWJd9LbzPLlfwHniPifD3aGTgAAAABJRU5ErkJggg==">
+  </header>
+  <div class="controls"><div class="yearsw" aria-label="Jahr wählen"><button id="yPrev" aria-label="Vorjahr">‹</button><span id="yLabel">2027</span><button id="yNext" aria-label="Folgejahr">›</button></div><span id="syncchip" class="chip"></span></div>
+  <main id="view"></main>
+</div>
+<nav class="tabbar" aria-label="Navigation"><div class="in">
+  <button class="tab" data-tab="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v9h9A9 9 0 1 1 12 3z"/><path d="M15.5 3.7A9 9 0 0 1 20.3 8.5h-4.8z"/></svg>Übersicht</button>
+  <button class="tab" data-tab="bills"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01" stroke-width="2.6"/></svg>Rechnungen</button>
+  <button class="tab" data-tab="scan" aria-label="Rechnung scannen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.8l1.6-2h4.2l1.6 2h1.8A2.5 2.5 0 0 1 20 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5z"/><circle cx="12" cy="13" r="3.6"/></svg>Scan</button>
+  <button class="tab" data-tab="vorsorge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.4-7-10.2A4.3 4.3 0 0 1 12 7a4.3 4.3 0 0 1 7 3.8C19 16.6 12 21 12 21z"/><path d="M9.5 12.5l1.8 1.8 3.2-3.6"/></svg>Vorsorge</button>
+  <button class="tab" data-tab="more"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Mehr</button>
+</div></nav>
+<input type="file" id="inCamera" accept="image/*" capture="environment" hidden>
+<input type="file" id="inPhoto" accept="image/*" multiple hidden>
+<input type="file" id="inPdf" accept="application/pdf" hidden>
+<input type="file" id="inRestore" accept="application/json" hidden>
+
+<script>
+'use strict';
+/* ============ Grundlagen ============ */
+const APP_VERSION = '1.1.0';
+const IN_PREVIEW = (()=>{ try{ return window.top!==window.self || /claude\.ai|claudeusercontent|anthropic/.test(location.hostname); }catch(e){ return true; } })();
+const $ = (s,r=document)=>r.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const z2 = n => String(n).padStart(2,'0');
+const isoLocal = d => d.getFullYear()+'-'+z2(d.getMonth()+1)+'-'+z2(d.getDate());
+const todayISO = () => isoLocal(new Date());
+const fmtDate = iso => { if(!iso) return '–'; const [y,m,d]=iso.split('-'); return `${d}.${m}.${y}`; };
+const addDays = (iso,n) => { const d=new Date(iso+'T12:00:00'); d.setDate(d.getDate()+n); return isoLocal(d); };
+const addMonths = (iso,n) => { const d=new Date(iso+'T12:00:00'); d.setMonth(d.getMonth()+n); return isoLocal(d); };
+const eur = n => (Number(n)||0).toLocaleString('de-DE',{style:'currency',currency:'EUR'});
+const eur0 = n => Math.round(Number(n)||0).toLocaleString('de-DE')+' €';
+const parseDe = s => { if(s==null||s==='') return null; s=String(s).trim().replace(/\s|€/g,''); if(s.includes(',')) s=s.replace(/\./g,'').replace(',','.'); const v=parseFloat(s); return isNaN(v)?null:Math.round(v*100)/100; };
+const deNum = n => n==null?'':Number(n).toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2});
+const lsGet = k => { try{ return localStorage.getItem(k); }catch(e){ return null; } };
+const lsSet = (k,v) => { try{ v==null?localStorage.removeItem(k):localStorage.setItem(k,v); }catch(e){} };
+
+/* ============ Tarif: KOMFORT-SI 1 ============ */
+const CATS = {
+  arzt:        {label:'Arzt ambulant', g:'AR', rate:1, sb:true},
+  arznei:      {label:'Arzneimittel', g:'RX', rate:1, sb:true},
+  heilmittel:  {label:'Heilmittel (Physio u. a.)', g:'HM', rate:1, sb:true},
+  hilfsmittel: {label:'Hilfsmittel (z. B. Einlagen)', g:'HI', rate:1, sb:true},
+  sehhilfe:    {label:'Brille / Kontaktlinsen', g:'BR', rate:1, sb:true},
+  heilpraktiker:{label:'Heilpraktiker / Naturheilverfahren', g:'HP', rate:1, sb:true},
+  psycho:      {label:'Psychotherapie', g:'PT', rate:0.8, sb:true},
+  stationaer:  {label:'Krankenhaus', g:'KH', rate:1, sb:true},
+  zahn:        {label:'Zahnbehandlung', g:'ZA', rate:1, zahn:true},
+  zahnersatz:  {label:'Zahnersatz', g:'ZE', rate:0.85, zahn:true},
+  pzr:         {label:'Zahnreinigung / Prophylaxe', g:'PZ', rate:1, zahn:true, pool:'vorsorge'},
+  vorsorge:    {label:'Vorsorgeuntersuchung', g:'VO', rate:1, pool:'vorsorge'},
+  impfung:     {label:'Schutzimpfung', g:'IM', rate:1, pool:'vorsorge'},
+  sonstiges:   {label:'Nicht erstattungsfähig', g:'—', rate:0}
+};
+const DEFAULT_SETTINGS = {
+  name:'René', birth:'', startDate:'2026-12-01', sb:500, bonus:[600,750,900], priorFreeYears:0,
+  vorsorgeBudget:750, breEstimate:0, folgeschaden:true, taxOn:true, taxRate:39, basisShare:80,
+  zahnYearMode:'12m', zahnLimits:[750,1500,3000,5000], heilpraktikerBudget:1500, sehhilfeMax:450,
+  clientId:'', email:'', folderName:'PKV-App', autoReauth:true, premium:941.81
+};
+const DEFAULT_VORSORGE = [
+  {id:'checkup', name:'Check-up (Gesundheitsuntersuchung)', months:36, cost:80, last:''},
+  {id:'haut', name:'Hautkrebs-Screening', months:24, cost:50, last:''},
+  {id:'pzr', name:'Professionelle Zahnreinigung', months:6, cost:120, last:''},
+  {id:'tdap', name:'Impfung Tetanus / Diphtherie / Keuchhusten', months:120, cost:60, last:''},
+  {id:'grippe', name:'Grippeimpfung (optional)', months:12, cost:35, last:''},
+  {id:'mann45', name:'Krebsfrüherkennung Männer', months:12, cost:45, last:'', fromAge:45},
+  {id:'darm', name:'Darmkrebs-Vorsorge (Darmspiegelung)', months:120, cost:600, last:'', fromAge:50}
+];
+const DEFAULT_DEADLINES = [
+  {id:'aok-nachweis', title:'Versicherungsbestätigung der SIGNAL IDUNA an die AOK', date:'2026-11-30', note:'Ohne Nachweis wird die Kündigung nicht wirksam.', done:false},
+  {id:'ag-bescheinigung', title:'Arbeitgeberbescheinigung an die Gehaltsabrechnung', date:'2026-12-01', note:'Damit der Zuschuss ab Dezember gezahlt wird.', done:false},
+  {id:'sparplan', title:'ETF-Sparplan an erste PKV-Gehaltsabrechnung anpassen', date:'2027-01-31', note:'Soll: Unterschied zur GKV + 150 €.', done:false},
+  {id:'befreiung', title:'Befreiungsantrag nach § 8 SGB V bei der AOK', date:'2027-03-31', note:'Sonst wirst du ab 01.01.2027 wieder gesetzlich versichert.', done:false}
+];
+
+const S = { settings:{...DEFAULT_SETTINGS}, bills:[], files:[], vorsorge:[], deadlines:[], years:{}, sync:{}, app:{demo:false},
+  ui:{tab:'home', year:null, filter:'all', q:'', open:new Set()} };
+
+const startYear = () => +S.settings.startDate.slice(0,4);
+const startMonth = () => +S.settings.startDate.slice(5,7);
+const billDate = b => b.treatmentDate || b.invoiceDate || '';
+const billYear = b => +(billDate(b) || todayISO()).slice(0,4);
+const byDate = (a,b) => billDate(a).localeCompare(billDate(b));
+const benefitOf = b => { const c=CATS[b.category]; if(!c||!c.rate) return 0; const rate=(b.rate!=null)?b.rate:c.rate; const base=(b.eligible!=null)?b.eligible:(b.amount||0); return Math.round(base*rate*100)/100; };
+function sbForYear(Y){ const st=S.settings; if(Y<startYear()) return 0; if(Y===startYear()){ const q=Math.floor((startMonth()-1)/3); return st.sb*(1-q/4); } return st.sb; }
+function proration(Y){ return Y===startYear() ? (13-startMonth())/12 : 1; }
+function stage(n){ const b=S.settings.bonus; return n<=0?0:b[Math.min(n,b.length)-1]; }
+function zahnLimitAt(iso){
+  const st=S.settings, L=st.zahnLimits; let n;
+  if(st.zahnYearMode==='rumpf'){ n=+iso.slice(0,4)-startYear()+1; }
+  else { const s=new Date(st.startDate+'T12:00:00'), d=new Date(iso+'T12:00:00');
+    let m=(d.getFullYear()-s.getFullYear())*12+(d.getMonth()-s.getMonth()); if(d.getDate()<s.getDate()) m--; n=Math.floor(m/12)+1; }
+  if(n<1) n=1; return n>L.length ? Infinity : L[n-1];
+}
+function sehhilfeAllowed(Y){ return !S.bills.some(b=>b.category==='sehhilfe' && b.submittedDate && billYear(b)===Y-1); }
+
+/* Kern: Aufteilung eines Jahres in "bonussicher" (Vorsorge-Budget) und "kostet Bonus" */
+function coreYear(Y){
+  const st=S.settings;
+  const bills=S.bills.filter(b=>billYear(b)===Y && b.category!=='sonstiges' && billDate(b)>=st.startDate).sort(byDate);
+  let vLeft=st.vorsorgeBudget, vUsed=0; const per={};
+  for(const b of bills){ const c=CATS[b.category]; const ben=benefitOf(b); let safe=0;
+    if(c.pool==='vorsorge'){ safe=Math.min(ben,vLeft); vLeft-=safe; vUsed+=safe; }
+    per[b.id]={benefit:ben, safe, rest:Math.round((ben-safe)*100)/100}; }
+  const claimed=bills.some(b=>b.submittedDate && per[b.id].rest>0.004);
+  return {bills, per, vUsed, vLeft, claimed};
+}
+function yearClaimed(Y){ return coreYear(Y).claimed; }
+function streakBefore(Y){ let n=0; for(let y=Y-1;y>=startYear();y--){ if(yearClaimed(y)) return n; n++; } return n + (S.settings.priorFreeYears||0); }
+
+function zahnAlloc(Y, per){
+  let used=0;
+  const past=S.bills.filter(b=>CATS[b.category]?.zahn && billYear(b)<Y && billYear(b)>=startYear() && b.submittedDate).sort(byDate);
+  for(const b of past){ const lim=zahnLimitAt(billDate(b)); used=Math.min(Math.max(lim,used), used+benefitOf(b)); }
+  const cur=S.bills.filter(b=>CATS[b.category]?.zahn && billYear(b)===Y).sort(byDate);
+  let safeR=0, restR=0;
+  for(const b of cur){ const p=per[b.id]; if(!p) continue; const lim=zahnLimitAt(billDate(b)); let avail=Math.max(lim-used,0);
+    const rs=Math.min(p.safe,avail); used+=rs; avail-=rs; const rr=Math.min(p.rest,avail); used+=rr; safeR+=rs; restR+=rr; }
+  const limEnd=zahnLimitAt(Y+'-12-31');
+  return {safeR, restR, used, limit:limEnd, left: limEnd===Infinity?Infinity:Math.max(limEnd-used,0)};
+}
+
+function analyzeYear(Y){
+  const st=S.settings; const core=coreYear(Y); const {bills,per}=core;
+  let sbBen=0, hp=0, seh=0; const sehOk=sehhilfeAllowed(Y);
+  for(const b of bills){ const c=CATS[b.category]; const p=per[b.id]; if(c.zahn||p.rest<=0) continue;
+    let add=p.rest;
+    if(b.category==='heilpraktiker'){ add=Math.min(add,Math.max(st.heilpraktikerBudget-hp,0)); hp+=add; }
+    if(b.category==='sehhilfe'){ add=sehOk?Math.min(add,Math.max(st.sehhilfeMax-seh,0)):0; seh+=add; }
+    sbBen+=add; }
+  const SB=sbForYear(Y); const reimbSB=Math.max(sbBen-SB,0); const sbUsed=Math.min(sbBen,SB);
+  const zahn=zahnAlloc(Y,per);
+  const streak=streakBefore(Y);
+  const bonus=Math.round(stage(streak+1)*proration(Y));
+  const fs=st.folgeschaden ? (stage(streak+2)+stage(streak+3))-(stage(1)+stage(2)) : 0;
+  const bre=Number(st.breEstimate)||0;
+  const lossGross=bonus+fs+bre;
+  const taxF=st.taxOn ? (st.taxRate/100)*(st.basisShare/100) : 0;
+  const lossNet=Math.round(lossGross*(1-taxF));
+  const gain=Math.round((reimbSB+zahn.restR)*100)/100;
+  const adv=Math.round(gain-lossNet);
+  const nonSafe=bills.filter(b=>per[b.id].rest>0.004);
+  const safeOpen=bills.filter(b=>per[b.id].safe>0 && !b.submittedDate);
+  let verdict;
+  if(core.claimed) verdict={code:'all', title:'Alles einreichen', amt:gain, text:`Für ${Y} sind schon Rechnungen eingereicht, der Gesundheitsbonus ist damit weg. Reiche jetzt auch die übrigen Rechnungen des Jahres ein.`};
+  else if(!nonSafe.length) verdict={code:'free', title: bills.length?'Leistungsfrei':'Noch keine Rechnungen', amt:null,
+      text: bills.length ? `Bisher nur Vorsorge. Die kannst du ohne Bonusverlust einreichen. Bonus für ${Y}: ${eur0(bonus)}.` : `Scanne deine erste Rechnung. Bleibt ${Y} leistungsfrei, gibt es ${eur0(bonus)} Gesundheitsbonus.`};
+  else if(adv>0) verdict={code:'submit', title:'Einreichen lohnt sich', amt:adv, text:`Die Erstattung von ${eur0(gain)} ist höher als das, was du verlierst (${eur0(lossNet)}${taxF?' nach Steuer':''}). Sobald du einreichst, ist der Bonus für ${Y} weg. Reiche dann alle Rechnungen des Jahres ein.`};
+  else { const needed=Math.max(Math.ceil(SB+lossNet-zahn.restR-sbBen),0);
+    verdict={code:'hold', title:'Selbst zahlen', amt:-adv, needed, text:`Einreichen würde ${eur0(gain)} bringen, du verlierst aber ${eur0(lossNet)}. Einreichen lohnt sich erst ab weiteren ${eur0(needed)} Arztrechnungen.`}; }
+  const all=S.bills.filter(b=>billYear(b)===Y);
+  const sum=all.reduce((s,b)=>s+(b.amount||0),0);
+  const refunded=all.reduce((s,b)=>s+(b.refundAmount||0),0);
+  const openRefund=all.filter(b=>b.submittedDate&&!b.refundedDate).reduce((s,b)=>s+benefitOf(b),0);
+  return {Y, SB, sbBen, sbUsed, reimbSB, zahn, vUsed:core.vUsed, vLeft:core.vLeft, streak, bonus, fs, bre, lossGross, lossNet, taxF, gain, adv, verdict,
+    claimed:core.claimed, per, nonSafe, safeOpen, sum, refunded, openRefund, count:all.length};
+}
+
+/* ============ Speicher (IndexedDB mit Fallback) ============ */
+const DB = { db:null, ok:false, mem:{bills:new Map(),files:new Map(),blobs:new Map(),meta:new Map()},
+  async open(){ try{ if(!('indexedDB' in window)) throw 0;
+      this.db=await new Promise((res,rej)=>{ const r=indexedDB.open('pkv-belegbuch',1);
+        r.onupgradeneeded=()=>{ const d=r.result; for(const s of ['bills','files','blobs','meta']) if(!d.objectStoreNames.contains(s)) d.createObjectStore(s,{keyPath:'id'}); };
+        r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); setTimeout(()=>rej('timeout'),4000); });
+      this.ok=true; }catch(e){ this.ok=false; } },
+  _p(r){ return new Promise((res,rej)=>{ r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); },
+  async all(s){ if(!this.ok) return [...this.mem[s].values()]; try{ return await this._p(this.db.transaction(s).objectStore(s).getAll()); }catch(e){ return []; } },
+  async get(s,id){ if(!this.ok) return this.mem[s].get(id); try{ return await this._p(this.db.transaction(s).objectStore(s).get(id)); }catch(e){ return undefined; } },
+  async put(s,o){ if(!this.ok){ this.mem[s].set(o.id,o); return; } try{ await this._p(this.db.transaction(s,'readwrite').objectStore(s).put(o)); }catch(e){ this.mem[s].set(o.id,o); } },
+  async del(s,id){ if(!this.ok){ this.mem[s].delete(id); return; } try{ await this._p(this.db.transaction(s,'readwrite').objectStore(s).delete(id)); }catch(e){} },
+  async clear(s){ if(!this.ok){ this.mem[s].clear(); return; } try{ await this._p(this.db.transaction(s,'readwrite').objectStore(s).clear()); }catch(e){} }
+};
+async function saveMeta(id){ const map={settings:S.settings, vorsorge:{items:S.vorsorge}, deadlines:{items:S.deadlines}, years:{data:S.years}, sync:S.sync, app:S.app};
+  await DB.put('meta',{...map[id], id}); }
+async function loadAll(){
+  await DB.open();
+  const metas=await DB.all('meta'); const m=Object.fromEntries(metas.map(x=>[x.id,x]));
+  S.settings={...DEFAULT_SETTINGS, ...(m.settings||{})}; delete S.settings.id;
+  S.vorsorge=m.vorsorge?.items || DEFAULT_VORSORGE.map(x=>({...x}));
+  S.deadlines=m.deadlines?.items || DEFAULT_DEADLINES.map(x=>({...x}));
+  S.years=m.years?.data || {};
+  S.sync=m.sync ? (({id,...r})=>r)(m.sync) : {dirty:false, trash:[]};
+  S.sync.trash=S.sync.trash||[];
+  S.app=m.app ? (({id,...r})=>r)(m.app) : null;
+  S.bills=await DB.all('bills'); S.files=await DB.all('files');
+  if(!S.app){ S.app={demo:true}; await loadDemo(); await saveMeta('app'); await saveMeta('vorsorge'); await saveMeta('deadlines'); await saveMeta('settings'); }
+}
+async function loadDemo(){
+  const d=[
+    ['Hausarztpraxis am Markt (Beispiel)','arzt',86.40,'2027-02-11',{paidDate:'2027-02-20'}],
+    ['Hautarztpraxis Dr. Weber (Beispiel)','vorsorge',54.21,'2027-03-04',{paidDate:'2027-03-10',submittedDate:'2027-03-10',refundedDate:'2027-03-24',refundAmount:54.21}],
+    ['Zahnarztpraxis Dr. Kaya (Beispiel)','pzr',118.00,'2027-04-15',{paidDate:'2027-04-30'}],
+    ['Orthopädie am Dom (Beispiel)','arzt',214.57,'2027-05-20',{}],
+    ['Sanitätshaus Lindner (Beispiel)','hilfsmittel',145.00,'2027-06-02',{paidDate:'2027-06-02'}],
+    ['Apotheke am Rathaus (Beispiel)','arznei',23.80,'2027-06-03',{paidDate:'2027-06-03'}]
+  ];
+  S.bills=d.map(([p,c,a,t,x])=>({id:uid(), demo:true, provider:p, category:c, amount:a, treatmentDate:t, invoiceDate:t, dueDate:addDays(t,30), note:'', createdAt:Date.now(), ...x}));
+  for(const b of S.bills) await DB.put('bills',b);
+}
+async function clearDemo(){
+  for(const b of S.bills.filter(b=>b.demo)){ await DB.del('bills',b.id); }
+  S.bills=S.bills.filter(b=>!b.demo); S.app.demo=false; await saveMeta('app');
+  S.ui.year=defaultYear(); render(); toast('Beispieldaten gelöscht. Viel Erfolg mit dem Belegbuch!');
+}
+let saveTimer=null;
+function markDirty(){ S.sync.dirty=true; saveMeta('sync'); clearTimeout(saveTimer); saveTimer=setTimeout(()=>syncNow({}),2500); }
+async function saveBill(b){ b.updatedAt=Date.now(); const i=S.bills.findIndex(x=>x.id===b.id); if(i<0) S.bills.push(b); else S.bills[i]=b; await DB.put('bills',b); if(!b.demo) markDirty(); requestPersist(); }
+async function deleteBill(id){ const fs=S.files.filter(f=>f.billId===id);
+  for(const f of fs){ if(f.driveId) S.sync.trash.push(f.driveId); await DB.del('files',f.id); await DB.del('blobs',f.id); }
+  S.files=S.files.filter(f=>f.billId!==id); S.bills=S.bills.filter(b=>b.id!==id); await DB.del('bills',id); markDirty(); }
+async function addFile(billId, blob, kind, name){ const f={id:uid(), billId, kind, mime:blob.type||'application/pdf', name:name||'', size:blob.size, createdAt:Date.now()};
+  await DB.put('blobs',{id:f.id, blob}); await DB.put('files',f); S.files.push(f); return f; }
+async function getBlob(fid){ const r=await DB.get('blobs',fid); if(r?.blob) return r.blob;
+  const f=S.files.find(x=>x.id===fid); if(f?.driveId && tokenValid()){ const res=await gfetch(`https://www.googleapis.com/drive/v3/files/${f.driveId}?alt=media`); const bl=await res.blob(); await DB.put('blobs',{id:fid,blob:bl}); return bl; }
+  return null; }
+let persistAsked=false; function requestPersist(){ if(persistAsked) return; persistAsked=true; try{ navigator.storage?.persist?.(); }catch(e){} }
+
+/* ============ Rechnungs-Erkennung ============ */
+function parseInvoice(text){
+  const t=(text||'').replace(/\r/g,''); const lines=t.split('\n').map(s=>s.trim()).filter(Boolean); const low=t.toLowerCase();
+  const amtRe=/(?<![\d,.])(\d{1,3}(?:\.\d{3})+|\d+),(\d{2})(?!\d)/g;
+  const toNum=s=>parseFloat(s.replace(/\./g,'').replace(',','.'));
+  const PRI=['rechnungsbetrag','zu zahlen','zahlbetrag','endbetrag','gesamtbetrag','rechnungssumme','gesamtsumme','summe','gesamt','betrag'];
+  let best=null;
+  lines.forEach((l,i)=>{ const ll=l.toLowerCase(); const pi=PRI.findIndex(k=>ll.includes(k)); if(pi<0||/mwst|ust\.|steuer|minderung|abzüglich/.test(ll)) return;
+    let m=[...l.matchAll(amtRe)]; if(!m.length&&lines[i+1]) m=[...lines[i+1].matchAll(amtRe)]; if(!m.length) return;
+    const v=toNum(m[m.length-1][0]); if(!(v>0&&v<100000)) return;
+    if(!best||pi<best.pi||(pi===best.pi&&v>best.v)) best={pi,v}; });
+  let amount=best?best.v:null;
+  if(amount==null){ const all=[...t.matchAll(amtRe)].map(m=>toNum(m[0])).filter(v=>v>0&&v<50000); if(all.length) amount=Math.max(...all); }
+  const dRe=/(\d{1,2})\.\s?(\d{1,2})\.\s?(\d{4}|\d{2})(?!\d)/g;
+  const toIso=(d,m,y)=>{ y=+y; if(y<100) y+=2000; d=+d; m=+m; if(m<1||m>12||d<1||d>31) return null; return `${y}-${z2(m)}-${z2(d)}`; };
+  const datesIn=s=>[...s.matchAll(dRe)].map(x=>toIso(x[1],x[2],x[3])).filter(Boolean);
+  const findKey=re=>{ for(let i=0;i<lines.length;i++){ if(re.test(lines[i].toLowerCase())){ const d=datesIn(lines[i]); if(d.length) return d[0]; const n=lines[i+1]?datesIn(lines[i+1]):[]; if(n.length) return n[0]; } } return null; };
+  const allDates=datesIn(t); const today=todayISO();
+  let invoiceDate=findKey(/rechnungsdatum|datum der rechnung|rechnung vom|^datum/);
+  if(!invoiceDate){ const c=allDates.filter(d=>d<=addDays(today,30)&&d>=addDays(today,-730)).sort(); invoiceDate=c[c.length-1]||null; }
+  let treatmentDate=findKey(/behandlungsdatum|behandlungszeitraum|leistungszeitraum|behandlung vom|behandlungstag/);
+  if(!treatmentDate&&invoiceDate){ const c=allDates.filter(d=>d<=invoiceDate&&d>=addDays(invoiceDate,-400)).sort(); treatmentDate=c[0]||invoiceDate; }
+  let dueDate=findKey(/zahlbar bis|fällig (am|bis)|zahlungsziel|zahlung bis|bis zum/);
+  if(!dueDate&&invoiceDate){ const m=low.match(/innerhalb\s+(?:von\s+)?(\d{1,2})\s+tag/); dueDate=addDays(invoiceDate, m?+m[1]:30); }
+  const provRe=/(dr\.|prof\.|praxis|zahnarzt|zahnärzt|klinik|krankenhaus|apotheke|physio|optik|mvz|labor|heilpraktiker|sanitätshaus|versorgungszentrum|hautarzt|orthopäd)/i;
+  let provider=(lines.find(l=>provRe.test(l)&&!/lütkefedder|luetkefedder|patient|versicherte/i.test(l))||lines[0]||'').slice(0,70);
+  const has=re=>re.test(low);
+  let category='arzt';
+  if(has(/zahnersatz|krone|brücke|implantat|prothese|zahntechni/)) category='zahnersatz';
+  else if(has(/professionelle zahnreinigung|\bpzr\b|prophylaxe/)&&has(/zahn|goz/)) category='pzr';
+  else if(has(/\bgoz\b|zahnarzt|zahnärzt|zahnmedizin|kieferorth/)) category='zahn';
+  else if(has(/krankenhaus|klinikum|stationär|wahlleistung|unterkunft|pflegesatz|\bdrg\b/)) category='stationaer';
+  else if(has(/apotheke|\bpzn\b/)) category='arznei';
+  else if(has(/physiotherap|krankengymnastik|massage|lymphdrainage|ergotherap|logopäd|heilmittel/)) category='heilmittel';
+  else if(has(/optik|optiker|brillenglas|brillengläser|kontaktlinse/)) category='sehhilfe';
+  else if(has(/heilpraktiker|gebüh|hufeland/)) category='heilpraktiker';
+  else if(has(/psychotherap/)) category='psycho';
+  else if(has(/sanitätshaus|einlage|orthese|bandage|hilfsmittel/)) category='hilfsmittel';
+  else if(has(/impfung|impfstoff|vakzin|schutzimpf/)) category='impfung';
+  else if(has(/hautkrebs|screening|früherkennung|vorsorgeuntersuchung|check-?up|gesundheitsuntersuchung|krebsvorsorge/)) category='vorsorge';
+  return {amount, invoiceDate, treatmentDate, dueDate, provider, category};
+}
+
+/* ============ Bibliotheken bei Bedarf laden ============ */
+const libs={};
+function loadScript(src){ if(libs[src]) return libs[src]; libs[src]=new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=()=>{ delete libs[src]; rej(new Error('Laden fehlgeschlagen: '+src)); }; document.head.appendChild(s); }); return libs[src]; }
+const LIB={ jspdf:'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+  pdfjs:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', pdfworker:'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
+  tess:'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js' };
+async function pdfjs(){ await loadScript(LIB.pdfjs); window.pdfjsLib.GlobalWorkerOptions.workerSrc=LIB.pdfworker; return window.pdfjsLib; }
+let ocrWorker=null;
+async function ocr(canvas, onProgress){
+  await loadScript(LIB.tess);
+  if(!ocrWorker) ocrWorker=await Tesseract.createWorker('deu',1,{logger:m=>{ if(m.status==='recognizing text') onProgress?.(m.progress); }});
+  const r=await ocrWorker.recognize(canvas); return r.data.text||'';
+}
+function fileToImage(file){ return new Promise((res,rej)=>{ const url=URL.createObjectURL(file); const img=new Image(); img.onload=()=>{ res(img); }; img.onerror=()=>rej(new Error('Bild nicht lesbar')); img.src=url; }); }
+function drawScaled(img,max){ const s=Math.min(1,max/Math.max(img.naturalWidth||img.width,img.naturalHeight||img.height)); const c=document.createElement('canvas'); c.width=Math.round((img.naturalWidth||img.width)*s); c.height=Math.round((img.naturalHeight||img.height)*s); c.getContext('2d').drawImage(img,0,0,c.width,c.height); return c; }
+async function imagesToPdf(canvases){
+  await loadScript(LIB.jspdf); const {jsPDF}=window.jspdf; const doc=new jsPDF({unit:'mm',format:'a4',compress:true});
+  canvases.forEach((c,i)=>{ if(i) doc.addPage(); const W=210,H=297,m=6; const r=Math.min((W-2*m)/c.width,(H-2*m)/c.height); const w=c.width*r,h=c.height*r;
+    doc.addImage(c.toDataURL('image/jpeg',0.72),'JPEG',(W-w)/2,(H-h)/2,w,h); });
+  return doc.output('blob');
+}
+async function pdfText(blob){ const lib=await pdfjs(); const pdf=await lib.getDocument({data:await blob.arrayBuffer()}).promise; let out='';
+  for(let i=1;i<=Math.min(pdf.numPages,4);i++){ const p=await pdf.getPage(i); const tc=await p.getTextContent(); let lastY=null;
+    for(const it of tc.items){ const y=it.transform[5]; if(lastY!==null&&Math.abs(y-lastY)>4) out+='\n'; else if(lastY!==null) out+=' '; out+=it.str; lastY=y; } out+='\n'; }
+  return {pdf, text:out}; }
+async function renderPdfPage(pdf,n,scale){ const p=await pdf.getPage(n); const vp=p.getViewport({scale}); const c=document.createElement('canvas'); c.width=vp.width; c.height=vp.height; await p.render({canvasContext:c.getContext('2d'),viewport:vp}).promise; return c; }
+
+/* ============ Google Drive ============ */
+const SCOPE='https://www.googleapis.com/auth/drive.file';
+const FOLDER_MIME='application/vnd.google-apps.folder';
+const redirectUri=()=>location.origin+location.pathname.replace(/index\.html$/,'');
+function token(){ try{ return JSON.parse(lsGet('pkv.token')||'null'); }catch(e){ return null; } }
+function tokenValid(){ const t=token(); return !!(t&&t.exp>Date.now()+60000); }
+function startAuth(silent){ const st=S.settings; if(!st.clientId){ toast('Trage zuerst die Google Client-ID unter „Mehr“ ein.'); return; }
+  const state=uid(); lsSet('pkv.oauthState',state); if(silent) lsSet('pkv.silentAt',String(Date.now()));
+  const p=new URLSearchParams({client_id:st.clientId, redirect_uri:redirectUri(), response_type:'token', scope:SCOPE, include_granted_scopes:'true', state});
+  if(st.email) p.set('login_hint',st.email); if(silent) p.set('prompt','none');
+  location.href='https://accounts.google.com/o/oauth2/v2/auth?'+p.toString(); }
+function handleAuthRedirect(){ const h=location.hash; if(!h||!/access_token=|error=/.test(h)) return null;
+  const p=new URLSearchParams(h.slice(1)); history.replaceState(null,'',location.pathname+location.search);
+  if(p.get('state')!==lsGet('pkv.oauthState')) return 'state';
+  if(p.get('error')) return p.get('error');
+  lsSet('pkv.token',JSON.stringify({access_token:p.get('access_token'), exp:Date.now()+(+p.get('expires_in')||3600)*1000})); return 'ok'; }
+class AuthErr extends Error{}
+async function gfetch(url,opts={}){ const t=token(); if(!t) throw new AuthErr('Nicht angemeldet');
+  const r=await fetch(url,{...opts, headers:{...(opts.headers||{}), Authorization:'Bearer '+t.access_token}});
+  if(r.status===401){ lsSet('pkv.token',null); throw new AuthErr('Anmeldung abgelaufen'); }
+  if(!r.ok){ let msg=r.status+''; try{ msg=(await r.json()).error.message; }catch(e){} const e=new Error('Google Drive: '+msg); e.status=r.status; throw e; }
+  return r; }
+const gjson=(url,opts={})=>gfetch(url,{...opts, headers:{'Content-Type':'application/json',...(opts.headers||{})}}).then(r=>r.json());
+const qs=s=>encodeURIComponent(s);
+async function findOne(q){ const r=await gjson(`https://www.googleapis.com/drive/v3/files?q=${qs(q)}&fields=files(id,name,modifiedTime)&spaces=drive&pageSize=10`); return r.files?.[0]||null; }
+async function folderIn(parent,name,app){ const n=name.replace(/'/g,"\\'");
+  let f=await findOne(`'${parent}' in parents and name='${n}' and mimeType='${FOLDER_MIME}' and trashed=false`);
+  if(!f) f=await gjson('https://www.googleapis.com/drive/v3/files?fields=id',{method:'POST',body:JSON.stringify({name,mimeType:FOLDER_MIME,parents:[parent],appProperties:app?{pkvapp:app}:undefined})});
+  return f.id; }
+async function ensureFolders(){ const sy=S.sync; sy.folders=sy.folders||{};
+  if(sy.folders.root){ try{ const r=await gjson(`https://www.googleapis.com/drive/v3/files/${sy.folders.root}?fields=id,trashed`); if(r.trashed) sy.folders={}; }catch(e){ if(e instanceof AuthErr) throw e; sy.folders={}; } }
+  if(!sy.folders.root){ let f=await findOne(`appProperties has { key='pkvapp' and value='root' } and trashed=false`);
+    if(!f) f=await gjson('https://www.googleapis.com/drive/v3/files?fields=id',{method:'POST',body:JSON.stringify({name:S.settings.folderName||'PKV-App',mimeType:FOLDER_MIME,appProperties:{pkvapp:'root'}})});
+    sy.folders={root:f.id}; }
+  for(const [k,n] of [['rechnung','Rechnungen'],['bescheid','Erstattungsbescheide'],['backup','Backup']]) if(!sy.folders[k]) sy.folders[k]=await folderIn(sy.folders.root,n,k);
+  await saveMeta('sync'); return sy.folders; }
+async function yearFolder(kind,Y){ const key=kind+'-'+Y; const sy=S.sync; if(sy.folders[key]) return sy.folders[key]; sy.folders[key]=await folderIn(sy.folders[kind]||sy.folders.rechnung,String(Y)); await saveMeta('sync'); return sy.folders[key]; }
+async function driveUpload({name,mime,blob,parents,appProperties,fileId}){
+  const meta=fileId?{name}:{name,parents,appProperties}; const bd='pkv'+uid();
+  const body=new Blob([`--${bd}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${bd}\r\nContent-Type: ${mime}\r\n\r\n`,blob,`\r\n--${bd}--`]);
+  const url=`https://www.googleapis.com/upload/drive/v3/files${fileId?'/'+fileId:''}?uploadType=multipart&fields=id,name`;
+  return (await gfetch(url,{method:fileId?'PATCH':'POST',headers:{'Content-Type':`multipart/related; boundary=${bd}`},body})).json(); }
+function safeName(s){ return String(s||'').replace(/\(Beispiel\)/g,'').replace(/[\\/:*?"<>|]+/g,'').replace(/\s+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'').slice(0,40)||'Rechnung'; }
+function driveName(b,f){ const d=billDate(b)||todayISO(); const base=`${d}_${safeName(b.provider)}_${safeName(CATS[b.category]?.label||'')}_${deNum(b.amount||0)}`;
+  return (f.kind==='bescheid'?'Bescheid_':'')+base+(S.files.filter(x=>x.billId===b.id&&x.kind===f.kind).length>1?'_'+f.id.slice(-4):'')+'.pdf'; }
+function backupData(){ return {app:'PKV Belegbuch', version:1, exportedAt:new Date().toISOString(),
+  settings:(({clientId,...r})=>r)(S.settings), bills:S.bills.filter(b=>!b.demo), files:S.files.map(({id,billId,kind,mime,name,size,createdAt,driveId})=>({id,billId,kind,mime,name,size,createdAt,driveId})),
+  vorsorge:S.vorsorge, deadlines:S.deadlines, years:S.years}; }
+async function writeBackup(){ const sy=S.sync; const blob=new Blob([JSON.stringify(backupData(),null,1)],{type:'application/json'});
+  if(sy.backupId){ try{ await gfetch(`https://www.googleapis.com/upload/drive/v3/files/${sy.backupId}?uploadType=media`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:blob}); }catch(e){ if(e.status===404) sy.backupId=null; else throw e; } }
+  if(!sy.backupId){ const r=await driveUpload({name:'pkv-backup-aktuell.json',mime:'application/json',blob,parents:[sy.folders.backup],appProperties:{pkvapp:'backup'}}); sy.backupId=r.id; }
+  if(!sy.lastSnapshot||Date.now()-sy.lastSnapshot>7*864e5){ await driveUpload({name:`pkv-backup-${todayISO()}.json`,mime:'application/json',blob,parents:[sy.folders.backup],appProperties:{pkvapp:'snapshot'}}); sy.lastSnapshot=Date.now();
+    const r=await gjson(`https://www.googleapis.com/drive/v3/files?q=${qs(`'${sy.folders.backup}' in parents and appProperties has { key='pkvapp' and value='snapshot' } and trashed=false`)}&fields=files(id,name)&orderBy=name desc&pageSize=50`);
+    for(const f of (r.files||[]).slice(10)) await gjson(`https://www.googleapis.com/drive/v3/files/${f.id}`,{method:'PATCH',body:JSON.stringify({trashed:true})}); } }
+let syncing=false, syncAgain=false;
+const SYNC={state:'idle', msg:''};
+function pendingUploads(){ return S.files.filter(f=>!f.driveId && S.bills.some(b=>b.id===f.billId&&!b.demo)).length; }
+function setSync(state,msg=''){ SYNC.state=state; SYNC.msg=msg; renderSyncChip(); }
+async function syncNow({interactive=false}={}){
+  if(IN_PREVIEW) return setSync('preview');
+  if(S.app.demo) return setSync('demo');
+  if(!S.settings.clientId) return setSync('off');
+  if(!navigator.onLine) return setSync('offline');
+  if(!tokenValid()){ if(interactive) return startAuth(false); return setSync('auth'); }
+  if(syncing){ syncAgain=true; return; } syncing=true; setSync('running');
+  try{
+    await ensureFolders();
+    for(const f of S.files){ const b=S.bills.find(x=>x.id===f.billId); if(!b||b.demo) continue;
+      const name=driveName(b,f); const parent=await yearFolder(f.kind==='bescheid'?'bescheid':'rechnung', billYear(b));
+      if(!f.driveId){ const blob=(await DB.get('blobs',f.id))?.blob; if(!blob) continue;
+        const r=await driveUpload({name,mime:f.mime,blob,parents:[parent],appProperties:{pkvapp:'file'}}); f.driveId=r.id; f.driveName=name; f.driveParent=parent; await DB.put('files',f); S.sync.dirty=true; }
+      else if(f.driveName!==name||f.driveParent!==parent){ const mv=f.driveParent&&f.driveParent!==parent?`&addParents=${parent}&removeParents=${f.driveParent}`:'';
+        try{ await gjson(`https://www.googleapis.com/drive/v3/files/${f.driveId}?fields=id${mv}`,{method:'PATCH',body:JSON.stringify({name})}); f.driveName=name; f.driveParent=parent; await DB.put('files',f); }catch(e){ if(e instanceof AuthErr) throw e; } } }
+    for(const id of [...S.sync.trash]){ try{ await gjson(`https://www.googleapis.com/drive/v3/files/${id}`,{method:'PATCH',body:JSON.stringify({trashed:true})}); }catch(e){ if(e instanceof AuthErr) throw e; } S.sync.trash=S.sync.trash.filter(x=>x!==id); }
+    if(S.sync.dirty||!S.sync.backupId){ await writeBackup(); S.sync.dirty=false; }
+    S.sync.lastSync=Date.now(); await saveMeta('sync'); setSync('ok');
+  }catch(e){ if(e instanceof AuthErr) setSync('auth'); else setSync('error',e.message||String(e)); }
+  finally{ syncing=false; if(syncAgain){ syncAgain=false; setTimeout(()=>syncNow({}),500); } }
+}
+async function restoreFromDrive(){
+  if(!tokenValid()){ startAuth(false); return; }
+  try{ await ensureFolders(); const f=await findOne(`appProperties has { key='pkvapp' and value='backup' } and trashed=false`);
+    if(!f){ toast('Kein Backup in Google Drive gefunden.'); return; }
+    const data=await (await gfetch(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media`)).json();
+    await applyBackup(data,`Backup vom ${new Date(data.exportedAt).toLocaleString('de-DE')}`); S.sync.backupId=f.id; await saveMeta('sync');
+  }catch(e){ toast(e.message||'Wiederherstellen fehlgeschlagen'); } }
+async function applyBackup(data,label){
+  if(!data||!Array.isArray(data.bills)){ toast('Die Datei ist kein Belegbuch-Backup.'); return; }
+  const ok=await confirmBox(`${label} mit ${data.bills.length} Rechnungen wiederherstellen? Die Daten auf diesem Gerät werden ersetzt.`,'Wiederherstellen'); if(!ok) return;
+  await DB.clear('bills'); await DB.clear('files');
+  S.bills=data.bills; S.files=data.files||[]; for(const b of S.bills) await DB.put('bills',b); for(const f of S.files) await DB.put('files',f);
+  const cid=S.settings.clientId; S.settings={...DEFAULT_SETTINGS,...(data.settings||{}), clientId:cid};
+  S.vorsorge=data.vorsorge||S.vorsorge; S.deadlines=data.deadlines||S.deadlines; S.years=data.years||{}; S.app.demo=false;
+  for(const k of ['settings','vorsorge','deadlines','years','app']) await saveMeta(k);
+  S.ui.year=defaultYear(); render(); toast('Wiederhergestellt. PDFs werden beim Öffnen aus Drive geladen.'); }
+
+/* ============ Kalender (.ics) & Export ============ */
+const icsEsc=s=>String(s||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
+function icsEvent({id,title,date,note}){ const st=new Date().toISOString().replace(/[-:]/g,'').slice(0,15)+'Z';
+  return ['BEGIN:VEVENT',`UID:${id}-${date}@pkv-belegbuch`,`DTSTAMP:${st}`,`DTSTART;VALUE=DATE:${date.replace(/-/g,'')}`,`DTEND;VALUE=DATE:${addDays(date,1).replace(/-/g,'')}`,
+    `SUMMARY:${icsEsc(title)}`, note?`DESCRIPTION:${icsEsc(note)}`:'', 'BEGIN:VALARM','ACTION:DISPLAY',`DESCRIPTION:${icsEsc(title)}`,'TRIGGER:-P7D','END:VALARM',
+    'BEGIN:VALARM','ACTION:DISPLAY',`DESCRIPTION:${icsEsc(title)}`,'TRIGGER:-PT15H','END:VALARM','END:VEVENT'].filter(Boolean).join('\r\n'); }
+function icsFile(events){ return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//PKV Belegbuch//DE','CALSCALE:GREGORIAN',...events.map(icsEvent),'END:VCALENDAR'].join('\r\n'); }
+function download(name,content,mime){ if(IN_PREVIEW){ toast('Downloads funktionieren in der installierten App.'); return; }
+  const blob=content instanceof Blob?content:new Blob([content],{type:mime}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },4000); }
+async function shareBlob(blob,name){ try{ const file=new File([blob],name,{type:blob.type||'application/pdf'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){ await navigator.share({files:[file],title:name}); return true; } }catch(e){ if(e.name==='AbortError') return true; }
+  download(name,blob); return false; }
+function csvExport(){ const rows=[['Behandlungsdatum','Rechnungsdatum','Anbieter','Kategorie','Betrag','Bezahlt','Eingereicht','Erstattet am','Erstattung','Notiz']];
+  for(const b of S.bills.filter(b=>!b.demo).sort(byDate)) rows.push([billDate(b),b.invoiceDate||'',b.provider||'',CATS[b.category]?.label||'',deNum(b.amount),b.paidDate||'',b.submittedDate||'',b.refundedDate||'',b.refundAmount!=null?deNum(b.refundAmount):'',b.note||'']);
+  download(`belegbuch-${todayISO()}.csv`,'\ufeff'+rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(';')).join('\n'),'text/csv'); }
+
+/* ============ Oberfläche ============ */
+function defaultYear(){ if(S.app?.demo) return 2027; return Math.max(new Date().getFullYear(), startYear()); }
+let toastT=null;
+function toast(msg){ let t=$('#toast'); if(!t){ t=document.createElement('div'); t.id='toast'; t.className='toast'; t.setAttribute('role','status'); document.body.appendChild(t); } t.textContent=msg; t.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>t.hidden=true,3600); }
+function openSheet(title,html,{onClose}={}){ closeSheet(); const o=document.createElement('div'); o.className='overlay'; o.id='overlay';
+  o.innerHTML=`<div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(title)}"><header><h3>${esc(title)}</h3><button class="x" data-close aria-label="Schließen">×</button></header><div class="body">${html}</div></div>`;
+  o.addEventListener('click',e=>{ if(e.target===o||e.target.closest('[data-close]')){ closeSheet(); onClose?.(); } });
+  document.body.appendChild(o); document.body.style.overflow='hidden'; return o.querySelector('.body'); }
+function closeSheet(){ $('#overlay')?.remove(); document.body.style.overflow=''; }
+function confirmBox(text,okLabel='OK'){ return new Promise(res=>{ const o=document.createElement('div'); o.className='overlay'; o.style.alignItems='center'; o.style.zIndex=70;
+  o.innerHTML=`<div class="card" style="max-width:420px;width:calc(100% - 32px);display:flex;flex-direction:column;gap:14px"><p style="margin:0">${esc(text)}</p><div class="row-btns"><button class="btn" data-v="0">Abbrechen</button><button class="btn primary" data-v="1">${esc(okLabel)}</button></div></div>`;
+  o.addEventListener('click',e=>{ const b=e.target.closest('[data-v]'); if(b||e.target===o){ o.remove(); res(b?.dataset.v==='1'); } }); document.body.appendChild(o); }); }
+
+function renderSyncChip(){ const el=$('#syncchip'); if(!el) return;
+  const map={preview:['','Vorschau'],demo:['warn','Beispieldaten'],off:['','Drive aus'],offline:['warn','Offline'],auth:['warn','Anmelden'],running:['','Sichere …'],ok:['ok','Gesichert'],error:['err','Sync-Fehler'],idle:['','Drive']};
+  const [cls,lbl]=map[SYNC.state]||map.idle; const p=pendingUploads();
+  el.className='chip '+cls; el.innerHTML=`<span class="dot"></span>${esc(lbl)}${p&&SYNC.state!=='ok'&&!S.app.demo?` · ${p}`:''}${SYNC.state==='ok'&&S.sync.lastSync?' '+new Date(S.sync.lastSync).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}):''}`;
+  el.title=SYNC.msg||''; }
+
+function statusStamps(b,a){ const out=[]; const today=todayISO(); const p=a?.per?.[b.id];
+  if(b.refundedDate) out.push('<span class="stamp ref">Erstattet</span>');
+  else if(b.submittedDate) out.push('<span class="stamp sub">Eingereicht</span>');
+  else if(p&&p.safe>0&&p.rest<=0.004) out.push('<span class="stamp safe">Bonussicher</span>');
+  if(!b.paidDate&&b.category!=='sonstiges') out.push(`<span class="stamp open">${b.dueDate&&b.dueDate<today?'Überfällig':'Offen'}</span>`);
+  else if(b.paidDate&&!b.submittedDate&&!(p&&p.safe>0&&p.rest<=0.004)) out.push('<span class="stamp paid">Bezahlt</span>');
+  return out.join(''); }
+function billRow(b,a){ const c=CATS[b.category]||CATS.arzt; const gcls=c.pool==='vorsorge'?'v':(c.zahn?'z':(b.category==='stationaer'?'k':(b.category==='sonstiges'?'d':'')));
+  return `<button class="item" data-bill="${b.id}"><span class="glyph ${gcls}">${esc(c.g)}</span><span class="main"><span class="t">${esc(b.provider||'Ohne Namen')}</span><span class="sub">${fmtDate(billDate(b))} · ${esc(c.label)}</span></span><span class="r"><span class="a num">${eur(b.amount)}</span><span class="stamps">${statusStamps(b,a)}</span></span></button>`; }
+
+const SVGA='viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
+const ICON={
+  euro:`<svg ${SVGA}><circle cx="12" cy="12" r="9.2"/><path d="M15 8.6a4 4 0 1 0 0 6.8"/><path d="M7.5 11h5.5M7.5 13.3h5.5"/></svg>`,
+  plane:`<svg ${SVGA}><path d="M21 3 10.5 13.5"/><path d="M21 3l-6.5 18-4-7.5L3 9.5z"/></svg>`,
+  hourglass:`<svg ${SVGA}><path d="M6.5 3h11M6.5 21h11"/><path d="M8 3v2.5a4 4 0 0 0 8 0V3M8 21v-2.5a4 4 0 0 1 8 0V21"/></svg>`,
+  flag:`<svg ${SVGA}><path d="M5 21V4"/><path d="M5 4h12l-2.5 4L17 12H5"/></svg>`,
+  heart:`<svg ${SVGA}><path d="M12 20s-7-4.4-7-10A4.2 4.2 0 0 1 12 7a4.2 4.2 0 0 1 7 3c0 5.6-7 10-7 10z"/></svg>`,
+  kit:`<svg ${SVGA}><rect x="3" y="7" width="18" height="13" rx="3"/><path d="M9 7V5.2A1.2 1.2 0 0 1 10.2 4h3.6A1.2 1.2 0 0 1 15 5.2V7M12 10.5v6M9 13.5h6"/></svg>`,
+  star:`<svg ${SVGA}><path d="M12 3.5l2.6 5.3 5.8.9-4.2 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.2-4.1 5.8-.9z"/></svg>`,
+  tooth:`<svg ${SVGA}><path d="M8 4C5.4 4 4 5.9 4 8.4c0 2.8 1.6 4 2.1 6.8.5 2.6 1 4.8 2.2 4.8s1.4-2.6 2-4.6c.4-1.3 1-1.6 1.7-1.6s1.3.3 1.7 1.6c.6 2 .8 4.6 2 4.6s1.7-2.2 2.2-4.8c.5-2.8 2.1-4 2.1-6.8C20 5.9 18.6 4 16 4c-1.7 0-2.6 1-4 1S9.7 4 8 4z"/></svg>`
+};
+function viewHome(){ const Y=S.ui.year; const a=analyzeYear(Y); const st=S.settings; const v=a.verdict; const today=todayISO();
+  const maxBar=Math.max(a.gain,a.lossNet,1);
+  const side=v.amt!=null?`<div class="side"><b>${v.code==='all'?'':'+'}${eur0(v.amt)}</b><span>${v.code==='all'?'Erstattung':'Vorteil'}</span></div>`
+    :`<div class="side"><b>${eur0(a.bonus)}</b><span>Bonus</span></div>`;
+  const hero=`<section class="hero" aria-label="Empfehlung für ${Y}">
+    <div class="head"><div><div class="lbl">Empfehlung ${Y}</div><h3>${esc(v.title)}</h3></div>${side}</div>
+    ${a.nonSafe.length&&!a.claimed?`<div class="cmp">
+      <div class="row"><span>Erstattung, wenn du einreichst</span><b class="num">${eur0(a.gain)}</b><span class="bar"><i style="width:${a.gain/maxBar*100}%"></i></span></div>
+      <div class="row"><span>Verlust: Bonus ${eur0(a.bonus)}${a.fs?` + Folgeschaden ${eur0(a.fs)}`:''}${a.bre?` + Rückerstattung ${eur0(a.bre)}`:''}${a.taxF?', nach Steuer':''}</span><b class="num">${eur0(a.lossNet)}</b><span class="bar"><i style="width:${a.lossNet/maxBar*100}%"></i></span></div></div>`:''}
+    <p>${esc(v.text)}</p>
+    ${v.code==='hold'&&Y>=new Date().getFullYear()?'<p class="note">Rechnungen trotzdem bezahlen und hier sammeln. Endgültig entscheidest du im Januar für das ganze Jahr.</p>':''}
+    ${(v.code==='submit'||v.code==='all')?`<div class="row-btns"><button class="btn" data-go-filter="pending">Rechnungen zum Einreichen</button></div>`:''}
+  </section>`;
+  const unpaid=S.bills.filter(b=>!b.paidDate&&b.category!=='sonstiges').sort((x,y)=>(x.dueDate||'').localeCompare(y.dueDate||''));
+  const openRef=S.bills.filter(b=>b.submittedDate&&!b.refundedDate);
+  const dls=upcomingDeadlines(60), vd=vorsorgeDue();
+  const rows=[
+    [ICON.euro,'orange',unpaid.length,n=>n===1?'Rechnung noch nicht bezahlt':'Rechnungen noch nicht bezahlt','data-go-filter="unpaid"'],
+    [ICON.plane,'blue',a.safeOpen.length,()=>'bonussicher einreichen','data-go-filter="safe"'],
+    [ICON.hourglass,'violet',openRef.length,n=>n===1?'Erstattung offen':'Erstattungen offen','data-go-filter="submitted"'],
+    [ICON.flag,'red',dls.length,n=>n===1?'Frist in den nächsten 60 Tagen':'Fristen in den nächsten 60 Tagen','data-tab-go="more"'],
+    [ICON.heart,'green',vd.length,()=>'Vorsorge fällig','data-tab-go="vorsorge"']];
+  const total=rows.reduce((s,r)=>s+r[2],0);
+  const todo=`<section class="todo" aria-label="Zu erledigen"><div class="top"><b>Zu erledigen</b><span>${total}</span></div>
+    ${rows.map(([ic,col,n,lbl,attr])=>`<button class="trow ${n?'':'zero'}" ${attr}><span class="ico plain ${col}" style="color:var(--${{orange:'warn',blue:'accent',violet:'violet',red:'bad',green:'good'}[col]})">${ic}</span><span><span class="n">${n}</span> ${esc(lbl(n))}</span></button>`).join('')}</section>`;
+  const sbPct=a.SB?Math.min(a.sbBen/a.SB,1)*100:0, vPct=Math.min(a.vUsed/st.vorsorgeBudget,1)*100;
+  const zInf=a.zahn.limit===Infinity;
+  const tile=(ic,col,title,pairs,pct,mcls)=>`<div class="tile"><div class="th"><span class="ico ${col}">${ic}</span><span>${title}</span></div><dl>${pairs.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl><div class="meter ${mcls||''}"><i style="width:${pct}%"></i></div></div>`;
+  const tiles=`<div class="tiles">
+    ${tile(ICON.kit,'blue','Selbstbehalt',[['Verbraucht',eur0(a.sbUsed)],['Noch offen',eur0(Math.max(a.SB-a.sbUsed,0))]],sbPct)}
+    ${tile(ICON.star,'violet','Bonus',[['Stufe',a.claimed?'–':`${Math.min(a.streak+1,3)} von 3`],['Betrag',a.claimed?'verloren':eur0(a.bonus)]],a.claimed?0:Math.min((a.streak+1)/3,1)*100,'violet')}
+    ${tile(ICON.heart,'green','Vorsorge',[['Genutzt',eur0(a.vUsed)],['Frei',eur0(a.vLeft)]],vPct,'green')}
+    ${tile(ICON.tooth,'blue','Zahn',[['Genutzt',eur0(a.zahn.used)],['Übrig',zInf?'unbegrenzt':eur0(a.zahn.left)]],zInf?0:Math.min(a.zahn.used/a.zahn.limit,1)*100,!zInf&&a.zahn.left<150?'warn':'')}
+  </div>`;
+  const nx=unpaid[0];
+  const next=nx?`<button class="glass wide" data-bill="${nx.id}"><span class="ico orange">${ICON.euro}</span><span class="main"><span class="t">Nächste Zahlung</span><span class="sub">${esc(nx.provider)} · fällig ${fmtDate(nx.dueDate)}${nx.dueDate&&nx.dueDate<today?' · überfällig':''}</span></span><span class="big">${eur(nx.amount)}</span></button>`
+    :`<div class="glass allclear"><svg width="54" height="54" viewBox="0 0 24 24" aria-hidden="true"><path fill="var(--good)" d="M12 1.5l2.4 1.8 3-.2 1 2.8 2.6 1.5-.6 2.9 1.4 2.7-2 2.2.1 3-2.9.7-1.6 2.6-2.8-1-2.8 1-1.6-2.6-2.9-.7.1-3-2-2.2 1.4-2.7-.6-2.9L5.6 5.9l1-2.8 3 .2z"/><path d="M8 12.3l2.7 2.7L16.3 9.4" fill="none" stroke="#0A1426" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><b>Keine offenen Rechnungen</b><span class="muted small">Alles bezahlt. Neue Rechnungen erfasst du über „Scan“.</span></div>`;
+  const yb=S.bills.filter(b=>billYear(b)===Y);
+  return `${S.app.demo?`<div class="banner"><p><b>Das sind Beispieldaten.</b> So sieht das Belegbuch mit ein paar Rechnungen aus. Deine eigenen Daten beginnen, sobald du die Beispiele löschst.</p><button class="btn sm" data-action="clear-demo">Beispiele löschen</button></div>`:''}
+    ${hero}${todo}${tiles}${next}
+    <h2>${Y} in Zahlen</h2>
+    <div class="card"><dl class="kv"><dt>Rechnungen</dt><dd>${yb.length}</dd><dt>Summe der Rechnungen</dt><dd>${eur(a.sum)}</dd><dt>Erstattet</dt><dd>${eur(a.refunded)}</dd><dt>Erstattung offen</dt><dd>${eur(a.openRefund)}</dd><dt>Selbst getragen</dt><dd>${eur(a.sum-a.refunded)}</dd></dl></div>`; }
+
+function billsFiltered(){ const a=analyzeYear(S.ui.year); const f=S.ui.filter; const q=S.ui.q.toLowerCase();
+  let list=S.bills.filter(b=>billYear(b)===S.ui.year);
+  if(f==='unpaid') list=list.filter(b=>!b.paidDate&&b.category!=='sonstiges');
+  if(f==='safe') list=list.filter(b=>a.per[b.id]?.safe>0&&!b.submittedDate);
+  if(f==='pending') list=list.filter(b=>!b.submittedDate&&(a.per[b.id]?.benefit||0)>0);
+  if(f==='submitted') list=list.filter(b=>b.submittedDate&&!b.refundedDate);
+  if(f==='done') list=list.filter(b=>b.refundedDate);
+  if(q) list=list.filter(b=>(b.provider+' '+(b.note||'')+' '+CATS[b.category]?.label).toLowerCase().includes(q));
+  return {list:list.sort((x,y)=>billDate(y).localeCompare(billDate(x))), a}; }
+function viewBills(){ const F=[['all','Alle'],['unpaid','Unbezahlt'],['safe','Bonussicher'],['pending','Nicht eingereicht'],['submitted','Eingereicht'],['done','Erstattet']];
+  return `<div class="filters" role="group" aria-label="Filter">${F.map(([k,l])=>`<button class="fbtn" aria-pressed="${S.ui.filter===k}" data-filter="${k}">${l}</button>`).join('')}</div>
+    <input class="search" id="q" type="search" placeholder="Arzt, Kategorie oder Notiz suchen" value="${esc(S.ui.q)}" aria-label="Suchen">
+    <div id="billlist" style="display:flex;flex-direction:column;gap:8px">${billListHtml()}</div>`; }
+function billListHtml(){ const {list,a}=billsFiltered();
+  if(!list.length) return `<div class="list"><div class="empty">Keine Rechnungen ${S.ui.filter==='all'&&!S.ui.q?'für '+S.ui.year:'mit diesem Filter'}.<br>Tippe unten auf „Erfassen“, um eine Rechnung zu scannen.</div></div>`;
+  let html='', cur='', group=[];
+  const flush=()=>{ if(group.length) html+=`<div class="month">${cur}</div><div class="list">${group.join('')}</div>`; group=[]; };
+  for(const b of list){ const m=new Date(billDate(b)+'T12:00:00').toLocaleDateString('de-DE',{month:'long',year:'numeric'}); if(m!==cur){ flush(); cur=m; } group.push(billRow(b,a)); }
+  flush(); return html; }
+
+function vorsorgeDue(){ const today=todayISO(); const age=ageAt(today); return S.vorsorge.filter(v=>(!v.fromAge||age>=v.fromAge)&&!v.optional).filter(v=>!v.last||addMonths(v.last,v.months)<=addDays(today,30)).filter(v=>v.id!=='grippe'); }
+function ageAt(iso){ const b=S.settings.birth; if(!b) return 0; let a=+iso.slice(0,4)-+b.slice(0,4); if(iso.slice(5)<b.slice(5)) a--; return a; }
+function viewVorsorge(){ const Y=S.ui.year; const a=analyzeYear(Y); const st=S.settings; const today=todayISO(); const age=ageAt(today);
+  const rows=S.vorsorge.map(v=>{ const next=v.last?addMonths(v.last,v.months):null; const later=v.fromAge&&age<v.fromAge;
+    let pill; if(later) pill=`<span class="pill mut">ab ${v.fromAge}</span>`; else if(!next) pill='<span class="pill warn">offen</span>'; else if(next<today) pill='<span class="pill bad">fällig</span>'; else if(next<addDays(today,60)) pill='<span class="pill warn">bald</span>'; else pill='<span class="pill good">ok</span>';
+    const every=v.months>=12?(v.months%12===0?`alle ${v.months/12===1?'':v.months/12+' '}Jahr${v.months/12>1?'e':''}`:`alle ${v.months} Monate`):`alle ${v.months} Monate`;
+    return `<div class="item" style="flex-wrap:wrap"><span class="main"><span class="t" style="white-space:normal">${esc(v.name)}</span><span class="sub">${every} · ca. ${eur0(v.cost)} · ${v.last?'zuletzt '+fmtDate(v.last):'noch nicht eingetragen'}${next&&!later?' · nächste '+fmtDate(next):''}</span></span><span class="r">${pill}</span>
+      <div class="row-btns" style="width:100%"><button class="btn sm" data-vdone="${v.id}">Erledigt eintragen</button><button class="btn sm ghost" data-vcal="${v.id}">In Kalender</button></div></div>`; }).join('');
+  const planned=S.vorsorge.filter(v=>!(v.fromAge&&ageAt(Y+'-12-31')<v.fromAge)&&v.id!=='grippe').reduce((s,v)=>{
+    if(v.months<12) return s+v.cost*Math.round(12/v.months);
+    const next=v.last?addMonths(v.last,v.months):today; return s+(+next.slice(0,4)<=Y?v.cost:0); },0);
+  return `<section class="card" style="display:flex;flex-direction:column;gap:10px"><div class="eyebrow">Vorsorge-Budget ${Y}</div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><b class="bignum">${eur0(a.vLeft)}</b><span class="muted small">von ${eur0(st.vorsorgeBudget)} frei</span></div>
+      <div class="meter"><i style="width:${Math.min(a.vUsed/st.vorsorgeBudget,1)*100}%"></i></div>
+      <p class="small" style="margin:0">Vorsorge, Impfungen und Zahnreinigung bis ${eur0(st.vorsorgeBudget)} im Jahr kosten weder Selbstbehalt noch Gesundheitsbonus. Eingeplant für ${Y}: etwa ${eur0(planned)}.</p></section>
+    <div class="hint">Laut Tarif werden Vorsorge-Rechnungen dem Budget nur sicher zugeordnet, wenn du sie bevorzugt über die App „Meine SIGNAL IDUNA“ einreichst.</div>
+    ${st.birth?'':'<div class="hint">Trag unter „Mehr → Tarif-Einstellungen“ dein Geburtsdatum ein, dann zeigt die App auch altersabhängige Vorsorge richtig an.</div>'}
+    <h2>Deine Vorsorge</h2><div class="list">${rows}</div>
+    <div class="row-btns"><button class="btn" data-action="vcal-all">Alle fälligen Termine in den Kalender</button></div>`; }
+
+function upcomingDeadlines(days){ const today=todayISO(); return allDeadlines().filter(d=>!d.done&&d.date<=addDays(today,days)).sort((a,b)=>a.date.localeCompare(b.date)); }
+function allDeadlines(){ const list=[...S.deadlines]; const now=new Date().getFullYear();
+  for(let y=startYear()+1;y<=now+1;y++){ const id='decide-'+(y-1); if(!list.some(d=>d.id===id)) list.push({id,title:`Einreichen-Entscheidung für ${y-1} treffen`,date:`${y}-01-20`,note:'Im Belegbuch das Jahr prüfen: einreichen oder Bonus mitnehmen.',done:!!S.years[y-1]?.decided,auto:true}); }
+  return list; }
+function viewMore(){ const st=S.settings; const today=todayISO();
+  const dl=allDeadlines().sort((a,b)=>a.date.localeCompare(b.date)).map(d=>`<div class="step"><button class="check" aria-pressed="${!!d.done}" data-dl="${d.id}" aria-label="Erledigt">${d.done?'✓':''}</button><div style="min-width:0"><div style="font-weight:600${d.done?';text-decoration:line-through;color:var(--muted)':''}">${esc(d.title)}</div><div class="small muted">${fmtDate(d.date)}${d.note?' · '+esc(d.note):''}</div></div>${!d.done&&d.date<today?'<span class="pill bad">vorbei</span>':'<button class="btn sm ghost" data-dlcal="'+d.id+'">Kalender</button>'}</div>`).join('');
+  const yrs=[]; for(let y=startYear();y<=Math.max(new Date().getFullYear(),startYear()+1);y++) yrs.push(y);
+  const yearRows=yrs.map(y=>{ const a=analyzeYear(y); const r=S.years[y]||{}; return `<div class="card" style="display:flex;flex-direction:column;gap:10px"><div style="display:flex;justify-content:space-between"><b>${y}</b><span class="pill ${a.claimed?'warn':'good'}">${a.claimed?'Leistungen eingereicht':'leistungsfrei'}</span></div>
+     <dl class="kv"><dt>Rechnungen</dt><dd>${eur(a.sum)}</dd><dt>Erstattet</dt><dd>${eur(a.refunded)}</dd><dt>Erwarteter Bonus</dt><dd>${a.claimed?'0,00 €':eur(a.bonus)}</dd></dl>
+     <div class="grid2"><div class="field"><label for="yb-${y}">Bonus erhalten (€)</label><input id="yb-${y}" inputmode="decimal" data-year="${y}" data-k="bonusReceived" value="${deNum(r.bonusReceived)}"></div><div class="field"><label for="yr-${y}">Beitragsrückerstattung (€)</label><input id="yr-${y}" inputmode="decimal" data-year="${y}" data-k="breReceived" value="${deNum(r.breReceived)}"></div></div>
+     ${(r.bonusReceived||r.breReceived)?`<div class="hint">Steuererklärung für das Jahr der Auszahlung: ${eur((r.bonusReceived||0)+(r.breReceived||0))} als erstattete Beiträge zur Kranken­versicherung angeben (Anlage Vorsorgeaufwand).</div>`:''}</div>`; }).join('');
+  const driveBlock = IN_PREVIEW ? `<div class="hint warn">Das ist die Vorschau. Google-Drive-Sicherung, Kalender-Export und Downloads funktionieren in der installierten App auf deinem iPhone.</div>` : `
+      <dl class="kv"><dt>Status</dt><dd>${esc({ok:'gesichert',auth:'Anmeldung nötig',off:'nicht eingerichtet',demo:'Beispieldaten aktiv',offline:'offline',error:'Fehler',running:'läuft',idle:'–'}[SYNC.state]||SYNC.state)}</dd>
+        <dt>Letzte Sicherung</dt><dd>${S.sync.lastSync?new Date(S.sync.lastSync).toLocaleString('de-DE'):'–'}</dd><dt>Ausstehende PDFs</dt><dd>${pendingUploads()}</dd></dl>
+      ${SYNC.msg?`<div class="hint warn">${esc(SYNC.msg)}</div>`:''}
+      <div class="row-btns"><button class="btn primary" data-action="sync">${tokenValid()?'Jetzt sichern':'Mit Google verbinden'}</button><button class="btn" data-action="restore-drive">Aus Drive wiederherstellen</button></div>
+      <div class="field"><label for="s-clientId">Google Client-ID</label><input id="s-clientId" data-s="clientId" value="${esc(st.clientId)}" placeholder="…apps.googleusercontent.com" autocomplete="off"></div>
+      <div class="field"><label for="s-email">Google-Konto (E-Mail, optional)</label><input id="s-email" data-s="email" value="${esc(st.email)}" inputmode="email" autocomplete="email"></div>
+      <div class="field"><label for="s-folderName">Ordnername in Drive (beim ersten Verbinden)</label><input id="s-folderName" data-s="folderName" value="${esc(st.folderName)}"></div>
+      <div class="field"><label>Weiterleitungs-URL für die Google Cloud Console</label><code class="sel">${esc(redirectUri())}</code></div>`;
+  return `<h2>Fristen</h2><div class="steps">${dl}</div>
+    <details class="card" data-open="dl" ${S.ui.open.has('dl')?'open':''}><summary>Eigene Frist hinzufügen</summary><div style="display:flex;flex-direction:column;gap:10px"><div class="field"><label for="dl-title">Was</label><input id="dl-title" placeholder="z. B. Widerspruch BE-SI-Dynamik"></div><div class="field"><label for="dl-date">Bis wann</label><input id="dl-date" type="date"></div><button class="btn" data-action="add-dl">Frist speichern</button></div></details>
+    <div class="row-btns"><button class="btn" data-action="dl-cal-all">Alle offenen Fristen in den Kalender</button></div>
+    <h2>Jahre, Bonus & Steuer</h2>${yearRows}
+    <h2>Google Drive</h2><section class="card" style="display:flex;flex-direction:column;gap:12px">${driveBlock}</section>
+    <details class="card" data-open="tarif" ${S.ui.open.has('tarif')?'open':''}><summary>Tarif-Einstellungen</summary><div style="display:flex;flex-direction:column;gap:12px">
+      <div class="grid2"><div class="field"><label for="s-name">Dein Vorname</label><input id="s-name" data-s="name" value="${esc(st.name)}"></div>${sField('birth','Geburtsdatum','date')}</div>
+      <div class="grid2">${sField('startDate','Versicherungsbeginn','date')}${sField('sb','Selbstbehalt (€/Jahr)')}</div>
+      <div class="field"><label for="s-bonus">Gesundheitsbonus-Stufen (€)</label><input id="s-bonus" data-s="bonus" value="${st.bonus.join(' / ')}"></div>
+      <div class="grid2">${sField('priorFreeYears','Angerechnete leistungsfreie Vorjahre')}${sField('breEstimate','Geschätzte Rückerstattung (€/Jahr)')}</div>
+      <div class="grid2">${sField('taxRate','Grenzsteuersatz (%)')}${sField('basisShare','Basisanteil des Beitrags (%)')}</div>
+      <label class="small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-s="taxOn" ${st.taxOn?'checked':''}> Bonus nach Steuer rechnen (Bonus mindert absetzbare Beiträge)</label>
+      <label class="small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-s="folgeschaden" ${st.folgeschaden?'checked':''}> Folgeschaden einrechnen (Bonusstufe fängt wieder bei ${eur0(st.bonus[0])} an)</label>
+      <div class="field"><label for="s-zahnYearMode">Versicherungsjahr für die Zahnstaffel</label><select id="s-zahnYearMode" data-s="zahnYearMode"><option value="12m" ${st.zahnYearMode==='12m'?'selected':''}>12 Monate ab Beginn (vorsichtig)</option><option value="rumpf" ${st.zahnYearMode==='rumpf'?'selected':''}>1. Jahr endet am 31.12.</option></select></div>
+      <div class="hint small">Die Zahnstaffel gilt „im Versicherungsjahr“. Ob dein erstes Versicherungsjahr am 31.12.2026 endet, bestätigt dir die SIGNAL IDUNA. Bis dahin rechnet die App vorsichtig.</div>
+    </div></details>
+    <details class="card" data-open="daten" ${S.ui.open.has('daten')?'open':''}><summary>Daten</summary><div class="row-btns">
+      <button class="btn" data-action="export-json">Backup als Datei</button><button class="btn" data-action="import-json">Backup-Datei laden</button><button class="btn" data-action="export-csv">Tabelle (CSV)</button>
+      ${S.app.demo?'<button class="btn" data-action="clear-demo">Beispiele löschen</button>':''}<button class="btn danger" data-action="wipe">Alles auf diesem Gerät löschen</button></div></details>
+    <p class="small muted">PKV Belegbuch ${APP_VERSION}. Die Empfehlungen rechnen mit den Bedingungen deines Tarifs KOMFORT-SI 1 (Stand Angebot 28.09.2026). Verbindlich sind Versicherungsschein und Bescheide der SIGNAL IDUNA.</p>`; }
+function sField(k,label,type='text'){ const v=S.settings[k]; return `<div class="field"><label for="s-${k}">${label}</label><input id="s-${k}" data-s="${k}" ${type==='date'?'type="date"':'inputmode="decimal"'} value="${esc(type==='date'?v:String(v).replace('.',','))}"></div>`; }
+
+function render(){ const Y=S.ui.year; const n=S.settings.name;
+  const H={home:[n?`Hallo, ${n}`:'Hallo','Dein digitales Rechnungsarchiv','Offene Rechnungen, Fristen und Erstattungen auf einen Blick'],
+    bills:['Rechnungen','',`Alle Belege aus ${Y}`], vorsorge:['Vorsorge','','Bis '+eur0(S.settings.vorsorgeBudget)+' im Jahr ohne Bonusverlust'], more:['Mehr','','Fristen, Google Drive und Tarif']}[S.ui.tab];
+  $('#hTitle').textContent=H[0]; $('#hLead').textContent=H[1]; $('#hLead').hidden=!H[1]; $('#hSub').textContent=H[2];
+  $('#yLabel').textContent=Y; $('#yPrev').disabled=Y<=startYear(); $('#yNext').disabled=Y>=Math.max(new Date().getFullYear(),startYear())+1;
+  document.querySelectorAll('.tab[data-tab]').forEach(t=>{ if(t.dataset.tab!=='scan') t.setAttribute('aria-current',t.dataset.tab===S.ui.tab?'page':'false'); });
+  const views={home:viewHome,bills:viewBills,vorsorge:viewVorsorge,more:viewMore};
+  $('#view').innerHTML=views[S.ui.tab]();
+  renderSyncChip(); }
+
+/* ============ Rechnung: Erfassen & Bearbeiten ============ */
+function catOptions(sel){ return Object.entries(CATS).map(([k,c])=>`<option value="${k}" ${k===sel?'selected':''}>${esc(c.label)}</option>`).join(''); }
+function tarifHint(b){ const c=CATS[b.category]; if(!c) return ''; const Y=billYear(b); const a=analyzeYear(Y); const p=a.per[b.id];
+  if(b.category==='sonstiges') return `<div class="hint">Wird nicht erstattet und zählt nicht für Bonus oder Selbstbehalt.</div>`;
+  if(billDate(b)&&billDate(b)<S.settings.startDate) return `<div class="hint warn">Behandlung vor Versicherungsbeginn (${fmtDate(S.settings.startDate)}). Die PKV erstattet das nicht, die Rechnung zählt nicht für Bonus oder Selbstbehalt.</div>`;
+  if(c.pool==='vorsorge'){ const left=a.vLeft+(p?p.safe:0); return `<div class="hint good">Vorsorge: bis ${eur0(S.settings.vorsorgeBudget)} im Jahr ohne Bonusverlust und ohne Selbstbehalt. Noch frei in ${Y}: ${eur0(left)}.${c.zahn?' Zählt aber zur Zahnstaffel.':''}</div>`; }
+  if(c.zahn) return `<div class="hint">Zahn: kein Selbstbehalt, ${c.rate<1?Math.round(c.rate*100)+' % Erstattung, ':''}Zahnstaffel gilt. Einreichen kostet den Gesundheitsbonus.</div>`;
+  let extra=''; if(b.category==='sehhilfe') extra=' Brille/Kontaktlinsen: bis 450 € alle zwei Kalenderjahre.'; if(b.category==='heilpraktiker') extra=' Budget 1.500 € im Jahr.'; if(b.category==='psycho') extra=' 80 % Erstattung.'; if(b.category==='arznei') extra=' Generikum 100 %, Originalpräparat 80 %.';
+  return `<div class="hint">Zählt zum Selbstbehalt (${eur0(a.SB)} in ${Y}). Einreichen kostet den Gesundheitsbonus.${extra}</div>`; }
+function billForm(b){ return `
+  <div class="field"><label for="f-provider">Arzt / Praxis / Anbieter</label><input id="f-provider" value="${esc(b.provider)}" autocomplete="off"></div>
+  <div class="grid2"><div class="field"><label for="f-amount">Rechnungsbetrag (€)</label><input id="f-amount" inputmode="decimal" value="${deNum(b.amount)}"></div>
+  <div class="field"><label for="f-category">Kategorie</label><select id="f-category">${catOptions(b.category)}</select></div></div>
+  <div id="f-hint">${tarifHint(b)}</div>
+  <div class="grid2"><div class="field"><label for="f-treat">Behandlungsdatum</label><input id="f-treat" type="date" value="${esc(b.treatmentDate)}"></div>
+  <div class="field"><label for="f-inv">Rechnungsdatum</label><input id="f-inv" type="date" value="${esc(b.invoiceDate)}"></div></div>
+  <div class="grid2"><div class="field"><label for="f-due">Zahlbar bis</label><input id="f-due" type="date" value="${esc(b.dueDate)}"></div>
+  <div class="field"><label for="f-eligible">Davon erstattungsfähig (€)</label><input id="f-eligible" inputmode="decimal" placeholder="wie Rechnung" value="${b.eligible!=null?deNum(b.eligible):''}"></div></div>
+  ${b.category==='arznei'?`<label class="small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="f-orig" ${b.rate===0.8?'checked':''}> Originalpräparat trotz Generikum (80 %)</label>`:''}
+  <div class="field"><label for="f-note">Notiz</label><textarea id="f-note">${esc(b.note)}</textarea></div>`; }
+function readForm(b){ b.provider=$('#f-provider').value.trim(); b.amount=parseDe($('#f-amount').value)||0; b.category=$('#f-category').value;
+  b.treatmentDate=$('#f-treat').value; b.invoiceDate=$('#f-inv').value; b.dueDate=$('#f-due').value; const el=parseDe($('#f-eligible').value); b.eligible=el; b.note=$('#f-note').value;
+  const o=$('#f-orig'); if(o) b.rate=o.checked?0.8:null; else if(b.category!=='arznei') b.rate=null; return b; }
+function wireFormHint(b){ const h=()=>{ const tmp=readForm({...b}); $('#f-hint').innerHTML=tarifHint({...tmp,id:b.id}); };
+  ['#f-category','#f-amount','#f-treat'].forEach(s=>$(s)?.addEventListener('change',h)); }
+
+async function openBill(id){ const b0=S.bills.find(x=>x.id===id); if(!b0) return; const b={...b0}; const files=S.files.filter(f=>f.billId===id);
+  const step=(key,label,dateKey)=>`<div class="step"><button class="check" aria-pressed="${!!b[dateKey]}" data-step="${dateKey}" aria-label="${label}">${b[dateKey]?'✓':''}</button><span>${label}</span><input type="date" id="st-${dateKey}" value="${esc(b[dateKey]||'')}" aria-label="${label} am"></div>`;
+  const body=openSheet(b.provider||'Rechnung',`
+    ${b.demo?'<div class="hint warn">Beispielrechnung. Änderungen werden nicht gesichert.</div>':''}
+    <div class="steps">${step('paid','Bezahlt','paidDate')}${step('sub','Eingereicht','submittedDate')}${step('ref','Erstattet','refundedDate')}
+      <div class="step"><span></span><span>Erstattungsbetrag</span><input id="st-refund" inputmode="decimal" placeholder="€" value="${b.refundAmount!=null?deNum(b.refundAmount):''}"></div></div>
+    ${billForm(b)}
+    <h2>Dokumente</h2>
+    <div class="list">${files.map(f=>`<div class="item"><span class="glyph">PDF</span><span class="main"><span class="t">${f.kind==='bescheid'?'Erstattungsbescheid':'Rechnung'}</span><span class="sub">${f.driveId?'in Google Drive gesichert':'noch nicht in Drive'} · ${Math.round((f.size||0)/1024)} KB</span></span><span class="r" style="flex-direction:row"><button class="btn sm" data-view="${f.id}">Ansehen</button><button class="btn sm" data-share="${f.id}">Teilen</button></span></div>`).join('')||'<div class="empty">Noch kein Dokument.</div>'}</div>
+    <div class="row-btns"><button class="btn" data-addfile="rechnung">Rechnung anhängen</button><button class="btn" data-addfile="bescheid">Bescheid anhängen</button></div>
+    <div class="row-btns"><button class="btn primary" id="saveBill">Speichern</button></div>
+    <button class="btn danger ghost" id="delBill">Rechnung löschen</button>`);
+  wireFormHint(b);
+  body.addEventListener('click',async e=>{ const t=e.target.closest('button'); if(!t) return;
+    if(t.dataset.step){ const k=t.dataset.step; const inp=$('#st-'+k); const on=t.getAttribute('aria-pressed')!=='true'; t.setAttribute('aria-pressed',on); t.textContent=on?'✓':''; inp.value=on?(inp.value||todayISO()):'';
+      if(k==='refundedDate'&&on&&!$('#st-refund').value) $('#st-refund').value=deNum(benefitOf(readForm({...b}))); }
+    if(t.dataset.view) viewPdf(t.dataset.view);
+    if(t.dataset.share){ const bl=await getBlob(t.dataset.share); if(!bl){ toast('PDF ist nicht auf diesem Gerät. Verbinde Google Drive.'); return; } const f=S.files.find(x=>x.id===t.dataset.share); await shareBlob(bl, driveName(b0,f)); }
+    if(t.dataset.addfile){ pendingAttach={billId:id,kind:t.dataset.addfile}; chooseSource(); }
+    if(t.id==='saveBill'){ readForm(b); for(const k of ['paidDate','submittedDate','refundedDate']) b[k]=$('#st-'+k).value||''; b.refundAmount=parseDe($('#st-refund').value);
+      await saveBill(b); closeSheet(); render(); toast('Gespeichert'); }
+    if(t.id==='delBill'){ if(await confirmBox('Diese Rechnung und ihre PDFs löschen? In Google Drive landen sie im Papierkorb.','Löschen')){ await deleteBill(id); closeSheet(); render(); toast('Gelöscht'); } } });
+  body.querySelectorAll('.step input[type=date]').forEach(inp=>inp.addEventListener('change',()=>{ const btn=body.querySelector(`[data-step="${inp.id.slice(3)}"]`); const on=!!inp.value; btn.setAttribute('aria-pressed',on); btn.textContent=on?'✓':''; })); }
+
+async function viewPdf(fid){ const body=openSheet('Dokument','<div class="progress"><i style="width:30%"></i></div>');
+  try{ const bl=await getBlob(fid); if(!bl) throw new Error('Das PDF ist nicht auf diesem Gerät. Verbinde Google Drive, dann wird es geladen.');
+    const lib=await pdfjs(); const pdf=await lib.getDocument({data:await bl.arrayBuffer()}).promise; body.innerHTML='<div class="pdfview"></div>'; const wrap=body.firstChild;
+    const w=Math.min(body.clientWidth-32,560); for(let i=1;i<=pdf.numPages;i++){ const p=await pdf.getPage(i); const s=(w*2)/p.getViewport({scale:1}).width; const c=await renderPdfPage(pdf,i,s); wrap.appendChild(c); }
+  }catch(e){ body.innerHTML=`<div class="hint warn">${esc(e.message||'PDF konnte nicht angezeigt werden.')}</div>`; } }
+
+/* Erfassen-Ablauf */
+let pendingAttach=null; let capture=null;
+function chooseSource(){ const body=openSheet(pendingAttach?(pendingAttach.kind==='bescheid'?'Bescheid anhängen':'Rechnung anhängen'):'Rechnung erfassen',`
+  <div class="row-btns"><button class="btn primary" data-src="camera">Kamera</button><button class="btn" data-src="photo">Foto aus Mediathek</button><button class="btn" data-src="pdf">PDF importieren</button></div>
+  ${pendingAttach?'':'<button class="btn ghost" data-src="manual">Ohne Dokument eintragen</button>'}
+  <p class="small muted" style="margin:0">Mehrseitige Rechnungen: nach dem ersten Foto „Weitere Seite“ tippen. Die Texterkennung läuft auf deinem Handy und schlägt Betrag, Datum und Arzt vor.</p>`,{onClose:()=>{pendingAttach=null;}});
+  body.addEventListener('click',e=>{ const s=e.target.closest('[data-src]')?.dataset.src; if(!s) return;
+    if(s==='manual'){ closeSheet(); startDraft({pages:[],pdfBlob:null,text:''}); return; }
+    capture={pages:[]}; $({camera:'#inCamera',photo:'#inPhoto',pdf:'#inPdf'}[s]).click(); }); }
+async function onImages(files){ if(!files.length) return; capture=capture||{pages:[]};
+  for(const f of files){ try{ const img=await fileToImage(f); capture.pages.push(drawScaled(img,1800)); }catch(e){ toast(e.message); } }
+  const body=openSheet('Seiten prüfen',`<div class="pages">${capture.pages.map(c=>`<img alt="Seite" src="${c.toDataURL('image/jpeg',.5)}">`).join('')}</div>
+    <div class="row-btns"><button class="btn" data-more="camera">Weitere Seite</button><button class="btn primary" data-go>Weiter</button></div>`,{onClose:()=>{capture=null;pendingAttach=null;}});
+  body.addEventListener('click',async e=>{ if(e.target.closest('[data-more]')) $('#inCamera').click(); if(e.target.closest('[data-go]')) await processCapture(); }); }
+async function processCapture(){ const pages=capture.pages; const body=openSheet('Wird gelesen …',`<p style="margin:0" id="ocrMsg">PDF wird erstellt …</p><div class="progress"><i id="ocrBar"></i></div>`);
+  let pdfBlob=null, text='';
+  try{ pdfBlob=await imagesToPdf(pages); }catch(e){ toast('PDF-Erstellung nicht möglich: '+e.message); }
+  if(pendingAttach){ await attachDone(pdfBlob); return; }
+  try{ $('#ocrMsg').textContent='Texterkennung läuft … (beim ersten Mal lädt sie das deutsche Wörterbuch, ca. 10 MB)';
+    text=await ocr(pages[0],p=>{ const bar=$('#ocrBar'); if(bar) bar.style.width=Math.round(p*100)+'%'; });
+  }catch(e){ toast('Texterkennung nicht verfügbar. Bitte Werte selbst eintragen.'); }
+  closeSheet(); startDraft({pdfBlob,text}); capture=null; }
+async function onPdf(file){ if(!file) return; if(pendingAttach){ await attachDone(file); return; }
+  const body=openSheet('Wird gelesen …','<p style="margin:0" id="ocrMsg">PDF wird gelesen …</p><div class="progress"><i id="ocrBar" style="width:20%"></i></div>');
+  let text='';
+  try{ const r=await pdfText(file); text=r.text; if(text.replace(/\s/g,'').length<40){ $('#ocrMsg').textContent='Gescanntes PDF – Texterkennung läuft …'; const c=await renderPdfPage(r.pdf,1,2); text=await ocr(c,p=>{ const bar=$('#ocrBar'); if(bar) bar.style.width=Math.round(p*100)+'%'; }); } }
+  catch(e){ toast('Text konnte nicht gelesen werden. Bitte Werte selbst eintragen.'); }
+  closeSheet(); startDraft({pdfBlob:file,text}); }
+async function attachDone(blob){ const {billId,kind}=pendingAttach; pendingAttach=null; capture=null; if(!blob){ closeSheet(); return; }
+  await addFile(billId,blob,kind); const b=S.bills.find(x=>x.id===billId); if(b&&!b.demo) markDirty(); closeSheet(); openBill(billId); toast('Dokument angehängt'); }
+function startDraft({pdfBlob,text}){ const p=parseInvoice(text); const t=todayISO();
+  const b={id:uid(), provider:p.provider||'', category:p.category||'arzt', amount:p.amount, treatmentDate:p.treatmentDate||p.invoiceDate||t, invoiceDate:p.invoiceDate||t, dueDate:p.dueDate||addDays(p.invoiceDate||t,30), note:'', createdAt:Date.now()};
+  const body=openSheet('Neue Rechnung',`${text?'<div class="hint good">Vorschläge aus der Texterkennung. Bitte kurz prüfen, vor allem den Betrag.</div>':''}
+    ${billForm(b)}
+    <label class="small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="f-paid"> Schon bezahlt</label>
+    ${text?`<details class="card"><summary>Erkannter Text</summary><pre style="white-space:pre-wrap;font:12px var(--f-mono);margin:0;max-height:240px;overflow:auto">${esc(text.slice(0,4000))}</pre></details>`:''}
+    <div class="row-btns"><button class="btn primary" id="saveNew">Rechnung speichern</button></div>`,{onClose:()=>{}});
+  wireFormHint(b);
+  body.querySelector('#saveNew').addEventListener('click',async()=>{ readForm(b); if(!b.amount){ toast('Bitte den Rechnungsbetrag eintragen.'); $('#f-amount').focus(); return; }
+    if($('#f-paid').checked) b.paidDate=todayISO();
+    if(S.app.demo){ const ok=await confirmBox('Deine erste echte Rechnung. Sollen die Beispieldaten jetzt gelöscht werden?','Beispiele löschen'); if(ok) await clearDemo(); }
+    await saveBill(b); if(pdfBlob) await addFile(b.id,pdfBlob,'rechnung'); markDirty();
+    closeSheet(); S.ui.year=billYear(b); S.ui.tab='home'; render(); toast('Rechnung gespeichert'); }); }
+
+/* ============ Ereignisse ============ */
+function bind(){
+  $('#yPrev').onclick=()=>{ S.ui.year--; render(); }; $('#yNext').onclick=()=>{ S.ui.year++; render(); };
+  document.querySelector('.tabbar').addEventListener('click',e=>{ const t=e.target.closest('[data-tab]'); if(!t) return; if(t.dataset.tab==='scan'){ pendingAttach=null; chooseSource(); return; } S.ui.tab=t.dataset.tab; render(); window.scrollTo(0,0); });
+  $('#inCamera').onchange=e=>{ const f=[...e.target.files]; e.target.value=''; onImages(f); };
+  $('#inPhoto').onchange=e=>{ const f=[...e.target.files]; e.target.value=''; onImages(f); };
+  $('#inPdf').onchange=e=>{ const f=e.target.files[0]; e.target.value=''; onPdf(f); };
+  $('#inRestore').onchange=async e=>{ const f=e.target.files[0]; e.target.value=''; if(!f) return; try{ await applyBackup(JSON.parse(await f.text()),'Backup-Datei'); }catch(err){ toast('Datei konnte nicht gelesen werden.'); } };
+  window.addEventListener('scroll',()=>$('#topbar').classList.toggle('scrolled',window.scrollY>4),{passive:true});
+  window.addEventListener('online',()=>syncNow({}));
+  const view=$('#view');
+  view.addEventListener('click',async e=>{ const t=e.target.closest('button,[data-bill]'); if(!t) return; const d=t.dataset;
+    if(d.bill) return openBill(d.bill);
+    if(d.filter){ S.ui.filter=d.filter; render(); return; }
+    if(d.goFilter){ S.ui.filter=d.goFilter; S.ui.tab='bills'; render(); return; }
+    if(d.tabGo){ S.ui.tab=d.tabGo; render(); window.scrollTo(0,0); return; }
+    if(d.vdone){ const v=S.vorsorge.find(x=>x.id===d.vdone); const body=openSheet(v.name,`<div class="field"><label for="vd">Erledigt am</label><input id="vd" type="date" value="${todayISO()}"></div><button class="btn primary" id="vsave">Speichern</button>`);
+      body.querySelector('#vsave').onclick=async()=>{ v.last=$('#vd').value; await saveMeta('vorsorge'); markDirty(); closeSheet(); render(); }; return; }
+    if(d.vcal){ const v=S.vorsorge.find(x=>x.id===d.vcal); const date=v.last?addMonths(v.last,v.months):addDays(todayISO(),14); download(`vorsorge-${v.id}.ics`,icsFile([{id:v.id,title:v.name+' – Termin vereinbaren',date,note:'Kosten zählen zum Vorsorge-Budget (750 €/Jahr, ohne Bonusverlust).'}]),'text/calendar'); return; }
+    if(d.dl){ const dd=allDeadlines().find(x=>x.id===d.dl); if(dd.auto){ const y=+dd.id.slice(7); S.years[y]={...(S.years[y]||{}),decided:!dd.done}; await saveMeta('years'); } else { const x=S.deadlines.find(q=>q.id===d.dl); x.done=!x.done; await saveMeta('deadlines'); } markDirty(); render(); return; }
+    if(d.dlcal){ const dd=allDeadlines().find(x=>x.id===d.dlcal); download(`frist-${dd.id}.ics`,icsFile([dd]),'text/calendar'); return; }
+    switch(d.action){
+      case 'clear-demo': return clearDemo();
+      case 'sync': return syncNow({interactive:true});
+      case 'restore-drive': return restoreFromDrive();
+      case 'export-json': return download(`pkv-backup-${todayISO()}.json`,JSON.stringify(backupData(),null,1),'application/json');
+      case 'import-json': return $('#inRestore').click();
+      case 'export-csv': return csvExport();
+      case 'vcal-all': { const ev=vorsorgeDue().map(v=>({id:v.id,title:v.name+' – Termin vereinbaren',date:addDays(todayISO(),14),note:'Vorsorge-Budget 750 €/Jahr'})); if(!ev.length) return toast('Keine fälligen Vorsorgetermine.'); return download('vorsorge.ics',icsFile(ev),'text/calendar'); }
+      case 'dl-cal-all': { const ev=allDeadlines().filter(x=>!x.done&&x.date>=todayISO()); return download('fristen.ics',icsFile(ev),'text/calendar'); }
+      case 'add-dl': { const title=$('#dl-title').value.trim(), date=$('#dl-date').value; if(!title||!date) return toast('Bitte Text und Datum eintragen.'); S.deadlines.push({id:uid(),title,date,note:'',done:false}); await saveMeta('deadlines'); markDirty(); render(); return toast('Frist gespeichert'); }
+      case 'wipe': { if(!await confirmBox('Wirklich alle Daten auf diesem Gerät löschen? Google Drive bleibt unverändert.','Alles löschen')) return;
+        for(const s of ['bills','files','blobs','meta']) await DB.clear(s); lsSet('pkv.token',null); location.reload(); return; }
+    } });
+  view.addEventListener('input',e=>{ if(e.target.id==='q'){ S.ui.q=e.target.value; $('#billlist').innerHTML=billListHtml(); } });
+  view.addEventListener('toggle',e=>{ const k=e.target.dataset?.open; if(k){ if(e.target.open) S.ui.open.add(k); else S.ui.open.delete(k); } },true);
+  view.addEventListener('change',async e=>{ const t=e.target;
+    if(t.dataset.s){ const k=t.dataset.s; let v=t.type==='checkbox'?t.checked:t.value;
+      if(k==='bonus'){ v=String(v).split(/[\/;\s]+/).map(parseDe).filter(x=>x!=null); if(v.length!==3) return toast('Bitte drei Stufen angeben, z. B. 600 / 750 / 900.'); }
+      else if(['sb','priorFreeYears','breEstimate','taxRate','basisShare'].includes(k)) v=parseDe(v)??0;
+      else if(typeof v==='string') v=v.trim();
+      S.settings[k]=v; await saveMeta('settings'); if(k!=='clientId'&&k!=='email') markDirty(); render(); toast('Gespeichert'); }
+    if(t.dataset.year){ const y=t.dataset.year; S.years[y]={...(S.years[y]||{}),[t.dataset.k]:parseDe(t.value)}; await saveMeta('years'); markDirty(); render(); } });
+}
+
+/* ============ Start ============ */
+(async function boot(){
+  const auth=IN_PREVIEW?null:handleAuthRedirect();
+  await loadAll(); S.ui.year=defaultYear(); bind(); render();
+  if(auth==='ok'){ toast('Mit Google verbunden'); lsSet('pkv.silentAt',null); }
+  else if(auth&&auth!=='state'){ setSync('auth', auth==='interaction_required'||auth==='login_required'?'Bitte einmal bei Google anmelden.':'Google-Anmeldung: '+auth); }
+  if(!IN_PREVIEW&&'serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+  const needs=!IN_PREVIEW&&!S.app.demo&&S.settings.clientId&&(S.sync.dirty||pendingUploads()>0)&&!tokenValid()&&navigator.onLine;
+  const lastSilent=+(lsGet('pkv.silentAt')||0);
+  if(needs&&S.settings.autoReauth&&!auth&&Date.now()-lastSilent>10*60000){ startAuth(true); return; }
+  syncNow({});
+})();
+</script>
+<!--APP-END-->
+</body>
+</html>
