@@ -215,7 +215,7 @@ input[type=checkbox]{accent-color:var(--accent);width:18px;height:18px}
 <script>
 'use strict';
 /* ============ Grundlagen ============ */
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.1.1';
 const IN_PREVIEW = (()=>{ try{ return window.top!==window.self || /claude\.ai|claudeusercontent|anthropic/.test(location.hostname); }catch(e){ return true; } })();
 const $ = (s,r=document)=>r.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -254,7 +254,7 @@ const DEFAULT_SETTINGS = {
   name:'René', birth:'', startDate:'2026-12-01', sb:500, bonus:[600,750,900], priorFreeYears:0,
   vorsorgeBudget:750, breEstimate:0, folgeschaden:true, taxOn:true, taxRate:39, basisShare:80,
   zahnYearMode:'12m', zahnLimits:[750,1500,3000,5000], heilpraktikerBudget:1500, sehhilfeMax:450,
-  clientId:'', email:'', folderName:'PKV-App', autoReauth:true, premium:941.81
+  clientId:'224489061373-shav7m8rhadfbt94lurtvo4nji5mhe8f.apps.googleusercontent.com', email:'', folderName:'PKV-App', autoReauth:true, premium:941.81
 };
 const DEFAULT_VORSORGE = [
   {id:'checkup', name:'Check-up (Gesundheitsuntersuchung)', months:36, cost:80, last:''},
@@ -375,6 +375,7 @@ async function loadAll(){
   await DB.open();
   const metas=await DB.all('meta'); const m=Object.fromEntries(metas.map(x=>[x.id,x]));
   S.settings={...DEFAULT_SETTINGS, ...(m.settings||{})}; delete S.settings.id;
+  if(!S.settings.clientId) S.settings.clientId=DEFAULT_SETTINGS.clientId;
   S.vorsorge=m.vorsorge?.items || DEFAULT_VORSORGE.map(x=>({...x}));
   S.deadlines=m.deadlines?.items || DEFAULT_DEADLINES.map(x=>({...x}));
   S.years=m.years?.data || {};
