@@ -482,7 +482,7 @@ function classify(raw){ const cfg=S.data.config; const tm=raw.head.match(IMPORT_
 }
 async function importFile(file){ let parsed=null;
   try{ if(/\.pdf$/i.test(file.name)||file.type==='application/pdf') parsed=parseIngLines(await pdfLines(file));
-    else { const buf=await file.arrayBuffer(); let txt=new TextDecoder('utf-8').decode(buf); if(txt.includes('�')) txt=new TextDecoder('windows-1252').decode(buf); parsed=parseIngCsv(txt); } }
+    else { const buf=await file.arrayBuffer(); let txt=new TextDecoder('utf-8').decode(buf); if(txt.includes('\uFFFD')) txt=new TextDecoder('windows-1252').decode(buf); parsed=parseIngCsv(txt); } }
   catch(e){ toast('Die Datei konnte nicht gelesen werden: '+(e.message||e)); return; }
   if(!parsed||!parsed.rows.length){ toast('Keine Umsätze gefunden. Ist das ein ING-Kontoauszug (PDF) oder ING-CSV?'); return; }
   const have=new Set(S.data.tx.map(t=>t.ext).filter(Boolean));
