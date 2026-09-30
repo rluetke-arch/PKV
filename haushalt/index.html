@@ -220,6 +220,7 @@ details.inact summary{padding:12px 16px;color:var(--muted);font-size:14px;cursor
 .tab.add .fab svg{width:24px;height:24px}
 .tab.add{padding-top:4px}
 .item .ico{flex:none}
+.rsel{width:100%;margin-top:8px;border:1px solid var(--line);background:rgba(255,255,255,.06);border-radius:10px;padding:8px 10px;min-height:40px}
 </style>
 </head>
 <body>
@@ -239,10 +240,11 @@ details.inact summary{padding:12px 16px;color:var(--muted);font-size:14px;cursor
   <button class="tab" data-tab="more"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Mehr</button>
 </div></nav>
 <input type="file" id="inImport" accept="application/json,.json" hidden>
+<input type="file" id="inIng" accept="application/pdf,.pdf,.csv,text/csv" hidden>
 
 <script>
 'use strict';
-const APP_VERSION='1.0.0';
+const APP_VERSION='1.1.0';
 const CLIENT_ID='224489061373-shav7m8rhadfbt94lurtvo4nji5mhe8f.apps.googleusercontent.com';
 const API_KEY='';        // Google Picker (nur für Anika nötig)
 const PROJECT_NUMBER=''; // Google-Cloud-Projektnummer
@@ -269,8 +271,8 @@ const lsGet=k=>{ try{ return localStorage.getItem(k); }catch(e){ return null; } 
 const lsSet=(k,v)=>{ try{ v==null?localStorage.removeItem(k):localStorage.setItem(k,v); }catch(e){} };
 
 /* ============ Zustand ============ */
-const EMPTY=()=>({config:{id:'config',upd:0,names:{a:'René',b:'Anika'},split:'income',kredit:{principal:0,rate:0,payment:0,start:'',fixYears:10,override:null},rueck:{amount:null,date:''}},items:[],tx:[],goals:[],accounts:[]});
-const COLLS=['items','tx','goals','accounts'];
+const EMPTY=()=>({config:{id:'config',upd:0,names:{a:'René',b:'Anika'},split:'income',kredit:{principal:0,rate:0,payment:0,start:'',fixYears:10,override:null},rueck:{amount:null,date:''}},items:[],tx:[],goals:[],accounts:[],rules:[]});
+const COLLS=['items','tx','goals','accounts','rules'];
 const S={data:EMPTY(), local:{me:null,fileId:null,role:null,folders:null,lastSync:0,lastSnapshot:0,dirty:false,apiKey:'',projectNumber:'',email:'',invited:[]}, ui:{tab:'home',month:ym(todayISO()),who:'all',cat:'',open:new Set()}};
 const live=c=>S.data[c].filter(x=>!x.del);
 const who=k=>k==='a'?S.data.config.names.a:k==='b'?S.data.config.names.b:'Gemeinsam';
@@ -287,7 +289,7 @@ let persistT=null;
 function persist(){ clearTimeout(persistT); persistT=setTimeout(()=>{ DB.put('data',S.data); DB.put('local',{...S.local}); },200); }
 function changed(){ S.local.dirty=true; persist(); scheduleSync(1500); render(); }
 function upsert(c,rec){ rec.upd=Date.now(); rec.by=meKey(); const a=S.data[c]; const i=a.findIndex(x=>x.id===rec.id); if(i<0) a.push(rec); else a[i]=rec; changed(); }
-function remove(c,id){ const r=S.data[c].find(x=>x.id===id); if(!r) return; for(const k of Object.keys(r)) if(k!=='id') delete r[k]; r.del=true; r.upd=Date.now(); changed(); }
+function remove(c,id){ const r=S.data[c].find(x=>x.id===id); if(!r) return; for(const k of Object.keys(r)) if(k!=='id'&&k!=='ext') delete r[k]; r.del=true; r.upd=Date.now(); changed(); }
 function setConfig(fn){ fn(S.data.config); S.data.config.upd=Date.now(); changed(); }
 
 /* ============ Rechnen ============ */
@@ -314,12 +316,13 @@ function month(M){
   // tatsächliche Buchungen
   const txs=live('tx').filter(t=>ym(t.date)===M);
   const cats=items.filter(i=>i.kind==='var').map(i=>({it:i, spent:txs.filter(t=>t.type!=='in'&&t.cat===i.id).reduce((s,t)=>s+t.amount,0)}));
-  const known=new Set(cats.map(c=>c.it.id));
-  const other=txs.filter(t=>t.type!=='in'&&!known.has(t.cat)).reduce((s,t)=>s+t.amount,0);
+  const allIds=new Set(live('items').map(i=>i.id)); const varIds=new Set(cats.map(c=>c.it.id));
+  const other=txs.filter(t=>t.type!=='in'&&!allIds.has(t.cat)).reduce((s,t)=>s+t.amount,0);
+  const fixActual=txs.filter(t=>t.type!=='in'&&allIds.has(t.cat)&&!varIds.has(t.cat)).reduce((s,t)=>s+t.amount,0);
   const spent=cats.reduce((s,c)=>s+c.spent,0)+other;
   const extraIn=txs.filter(t=>t.type==='in').reduce((s,t)=>s+t.amount,0);
   const due=live('items').filter(it=>active(it,M)&&dueIn(it,M));
-  return {M,items,incA,incB,incG,baseA,baseB,vorA,vorB,income,shareA,fixG,varG,rueck,ingNeed,pa,pb,saveG,trA,trB,freeA,freeB,costs,budget,saves,surplus,txs,cats,other,spent,extraIn,due,
+  return {M,items,fixActual,incA,incB,incG,baseA,baseB,vorA,vorB,income,shareA,fixG,varG,rueck,ingNeed,pa,pb,saveG,trA,trB,freeA,freeB,costs,budget,saves,surplus,txs,cats,other,spent,extraIn,due,
     savingsRate: income?(saves+Math.max(surplus,0))/income:0};
 }
 function rueckProjection(){ const r=S.data.config.rueck; const start=r.date?ym(r.date):ym(todayISO()); let bal=r.amount??0; const out=[];
@@ -407,6 +410,116 @@ async function pickShared(){ if(!tokenValid()){ startAuth(false); return; }
       .setCallback(async d=>{ if(d.action===google.picker.Action.PICKED){ S.local.fileId=d.docs[0].id; S.local.role='member'; persist(); await syncNow({}); render(); toast('Haushaltsbuch verbunden'); } }).build().setVisible(true);
   }catch(e){ toast(e.message||'Auswahl konnte nicht geöffnet werden.'); } }
 
+/* ============ ING-Kontoauszug-Import ============ */
+const IMPORT_TYPES=/^(Lastschrift|Gutschrift\/Dauerauftrag|Gutschrift|Echtzeitüberweisung|Echtzeitueberweisung|Überweisung|Ueberweisung|Dauerauftrag\/Terminueberw\.?|Dauerauftrag|Entgelt|Abschluss|Zinsen|Retoure|Rücküberweisung|Gehalt\/Rente|Bargeldauszahlung|Storno)(?=\s|$)\s*(.*)$/i;
+const toNumDe=s=>parseFloat(String(s).replace(/\./g,'').replace(',','.'));
+const dIso=s=>{ const [d,m,y]=s.split('.'); return `${y}-${m}-${d}`; };
+const norm=s=>String(s||'').toLowerCase().replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').replace(/[^a-z0-9]+/g,' ').trim();
+/* Zeilen aus dem PDF (pdf.js) */
+async function pdfLines(file){ await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'); pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise; const lines=[];
+  for(let p=1;p<=pdf.numPages;p++){ const tc=await (await pdf.getPage(p)).getTextContent(); const rows=[];
+    for(const it of tc.items){ if(!it.str||!it.str.trim()) continue; if(Math.abs(it.transform[1])>0.5) continue; // gedrehten Randtext überspringen
+      const x=it.transform[4], y=it.transform[5]; let r=rows.find(r=>Math.abs(r.y-y)<2.5); if(!r){ r={y,items:[]}; rows.push(r); } r.items.push({x,s:it.str}); }
+    rows.sort((a,b)=>b.y-a.y); for(const r of rows){ r.items.sort((a,b)=>a.x-b.x); lines.push({x:r.items[0].x,text:r.items.map(i=>i.s.trim()).join(' ').replace(/\s+/g,' ').trim(),page:p}); } }
+  return lines; }
+/* Rohbuchungen aus Zeilen */
+function parseIngLines(lines){ const out=[]; let cur=null, dateX=null, newSaldo=null, stmtDate=null, started=false;
+  const amtEnd=/^(.*?)\s*(-?\d{1,3}(?:\.\d{3})*,\d{2})$/;
+  for(const L of lines){ const t=L.text;
+    if(!stmtDate){ const m=t.match(/^Datum\s+(\d{2}\.\d{2}\.\d{4})/); if(m) stmtDate=dIso(m[1]); }
+    if(started&&/^Neuer Saldo\b/.test(t)){ const m=t.match(/(-?\d{1,3}(?:\.\d{3})*,\d{2})/); if(m) newSaldo=toNumDe(m[1]); cur=null; started=false; continue; }
+    const dm=t.match(/(?:^|\s)(\d{2}\.\d{2}\.\d{4})\s+(.*)$/);
+    if(dm){ const rest=dm[2].trim(); const am=rest.match(amtEnd);
+      if(am&&IMPORT_TYPES.test(am[1].trim())){ cur={date:dIso(dm[1]),head:am[1].trim(),amount:toNumDe(am[2]),lines:[]}; out.push(cur); started=true; if(dateX==null||L.x>dateX-5) dateX=dateX??L.x; continue; }
+      if(cur&&started&&t.indexOf(dm[1])<=2+(t.length-t.trimStart().length)){ if(rest) cur.lines.push(rest); continue; }
+      continue; }
+    if(cur&&started&&dateX!=null&&L.x>dateX+15&&!/^(Buchung|Valuta|Betrag|Seite|Datum)\b/.test(t)) cur.lines.push(t); }
+  return {rows:out,newSaldo,stmtDate}; }
+/* CSV-Export der ING */
+function parseIngCsv(text){ const lines=text.replace(/\r/g,'').split('\n'); const hi=lines.findIndex(l=>/^Buchung;/.test(l)); if(hi<0) return null;
+  const H=lines[hi].split(';'); const ix=n=>H.findIndex(h=>h.trim().toLowerCase()===n); const iD=ix('buchung'), iP=ix('auftraggeber/empfänger'), iT=ix('buchungstext'), iV=ix('verwendungszweck'), iB=H.findIndex(h=>h.trim().toLowerCase()==='betrag'), iS=ix('saldo');
+  const rows=[]; let newSaldo=null, stmtDate=null;
+  for(const l of lines.slice(hi+1)){ if(!l.trim()) continue; const c=l.split(';').map(s=>s.replace(/^"|"$/g,'').trim()); if(!/^\d{2}\.\d{2}\.\d{4}$/.test(c[iD]||'')) continue;
+    rows.push({date:dIso(c[iD]),head:`${c[iT]||''} ${c[iP]||''}`.trim(),amount:toNumDe(c[iB]),lines:[c[iV]||'']});
+    if(iS>=0&&(!stmtDate||dIso(c[iD])>=stmtDate)){ stmtDate=dIso(c[iD]); newSaldo=toNumDe(c[iS]); } }
+  return {rows,newSaldo,stmtDate}; }
+/* Standardregeln: Muster → Kategorie (Posten-ID) */
+const DEFAULT_RULES=[
+  ['darl leist|darlehen','fx-kredit'],['pader ?energy|lsw energie','fx-strom'],['grundbesitzabgabe|grundsteuer','r-grundsteuer'],['beitragsservice|rundfunk','r-gez'],['hundesteuer','r-hund'],
+  ['deutsche glasfaser','fx-glasfaser'],['leasing|hyundai capital|capital bank','fx-leasing'],['kita|elternbeitrag|kindertages','fx-kita'],['familienkasse|kindergeld','inc-kg1'],
+  ['kraftfahrzeugsteuer|kfz steuer','r-kfzsteuer'],['muellabfuhr|abfallgebuehr','r-muell'],
+  ['aslan|elli markt|edeka|rewe|aldi|lidl|kaufland|netto|penny|marktkauf|fischfeinkost|hit markt|combi|nahkauf|getraenke|tegut|globus|denns|alnatura|metzger|fleischerei|hofladen','v-lebensmittel'],
+  ['jet tankstelle|tankstelle|aral|shell|esso|totalenergies|avia|raiffeisen tank|\\bstar\\b|agip|q1 ','v-tanken'],
+  ['rossmann|\\bdm\\b|dm drogerie|mueller drog|budni','v-drogerie'],['apotheke','v-apotheke'],['backfuchs|baecker|backwerk|steinecke|backhaus|kamps|baeckerei|backstube','v-baeckerei'],
+  ['restaurant|mcdonald|burger|pizza|cafe|lieferando|doener|imbiss|trattoria|ristorante|bistro|eiscafe|starbucks|subway|kfc','v-restaurant'],
+  ['toys|spielwaren|mytoys|jako o|babyone|smyths|kinderschuh','v-kinder'],['hornbach|obi|bauhaus|toom|ikea|dehner|hagebau|poco|farben','v-haus'],
+  ['decathlon|vinted|amazon|zalando|h m|primark|tk maxx|erlebnispark|kino|klangpoesie|thalia|mediamarkt|saturn|otto|action|ernsting','v-shopping']
+].map(([m,c])=>({match:m,cat:c}));
+function classify(raw){ const cfg=S.data.config; const tm=raw.head.match(IMPORT_TYPES); const type=tm?tm[1]:''; let party=(tm?tm[2]:raw.head).trim();
+  const purpose=raw.lines.join(' ').replace(/\s+/g,' '); const card=(purpose.match(/NR\s*XXXX\s*(\d{4})/i)||[])[1]||null;
+  party=party.replace(/^VISA\s+/i,'').replace(/^\d{4}\s+/,'');
+  let date=raw.date; const k=purpose.match(/KAUFUMSATZ\s*(\d{2})\.(\d{2})/i); if(k){ let y=+raw.date.slice(0,4); if(+k[2]>+raw.date.slice(5,7)) y--; date=`${y}-${k[2]}-${k[1]}`; }
+  const hay=norm(party+' '+purpose); const pn=norm(party); const hayNS=hay.replace(/ /g,''); const amtKey=pn.replace(/\d+/g,'').trim()+'#'+Math.abs(raw.amount).toFixed(2);
+  const items=live('items'); const itemById=id=>items.find(i=>i.id===id);
+  let cat=null, rule=null;
+  for(const r of live('rules')){ if(!r.match) continue; const hit=r.match.includes('#')?r.match===amtKey:pn.replace(/\d+/g,'').trim().includes(r.match); if(hit){ cat=r.cat; rule='gelernt'; break; } }
+  const sur0=norm(cfg.surname||'luetkefedder lutkefedder').split(' ').filter(Boolean); const own0=sur0.some(x=>pn.includes(x))&&!/darl/.test(hay);
+  if(!cat&&own0) cat='__skip';
+  if(!cat) for(const r of DEFAULT_RULES){ const re=new RegExp('\\b(?:'+r.match+')\\b'), reNS=new RegExp(r.match.split('|').map(x=>x.replace(/ /g,'')).filter(x=>x.length>=6&&!x.includes('\\')).join('|')||'^$'); if((re.test(hay)||reNS.test(hayNS))&&itemById(r.cat)){ cat=r.cat; rule='standard'; break; } }
+  const sur=norm(cfg.surname||'luetkefedder lutkefedder').split(' ').filter(Boolean);
+  const own=sur.some(s=>pn.includes(s));
+  let kind;
+  if(cat==='__skip') kind='transfer';
+  else if(cat){ const it=itemById(cat); kind=!it?'var':it.kind==='var'?'var':it.kind==='income'?'income':'fix'; }
+  else if(own&&!/darl/.test(hay)) kind='transfer';
+  else if(raw.amount>0) kind='in';
+  else { kind='var'; cat='v-sonst'; rule=null; }
+  const who=card?(cfg.cards?.[card]||'g'):'g';
+  const ext=norm(`${raw.date} ${raw.amount} ${party} ${purpose.slice(0,40)}`);
+  const saldo=/darl/.test(hay)?(purpose.match(/Saldo:\s*([\d.]+,\d{2})/i)||[])[1]:null;
+  return {date,bookDate:raw.date,type,party,purpose,amount:raw.amount,card,cat,kind,rule,who,ext,amtKey,kreditSaldo:saldo?toNumDe(saldo):null};
+}
+async function importFile(file){ let parsed=null;
+  try{ if(/\.pdf$/i.test(file.name)||file.type==='application/pdf') parsed=parseIngLines(await pdfLines(file));
+    else { const buf=await file.arrayBuffer(); let txt=new TextDecoder('utf-8').decode(buf); if(txt.includes('�')) txt=new TextDecoder('windows-1252').decode(buf); parsed=parseIngCsv(txt); } }
+  catch(e){ toast('Die Datei konnte nicht gelesen werden: '+(e.message||e)); return; }
+  if(!parsed||!parsed.rows.length){ toast('Keine Umsätze gefunden. Ist das ein ING-Kontoauszug (PDF) oder ING-CSV?'); return; }
+  const have=new Set(S.data.tx.map(t=>t.ext).filter(Boolean));
+  const all=parsed.rows.map(classify); const fresh=all.filter(r=>!have.has(r.ext));
+  showImport({...parsed,all,fresh,dupes:all.length-fresh.length,name:file.name}); }
+function showImport(P){ const n=S.data.config.names; const vars=live('items').filter(i=>i.kind==='var'); const fixes=live('items').filter(i=>i.kind==='fix'||i.kind==='income');
+  const cards=[...new Set(P.fresh.map(r=>r.card).filter(Boolean))]; const cfgCards=S.data.config.cards||{};
+  const catSel=(r,i)=>`<select data-ri="${i}" class="rsel"><optgroup label="Haushaltsgeld">${vars.map(v=>`<option value="${v.id}" ${r.cat===v.id?'selected':''}>${esc(v.name)}</option>`).join('')}</optgroup><optgroup label="Fixkosten & Einnahmen">${fixes.map(v=>`<option value="${v.id}" ${r.cat===v.id?'selected':''}>${esc(v.name)}</option>`).join('')}</optgroup><option value="__in" ${r.kind==='in'?'selected':''}>Sonstige Einnahme</option><option value="__skip" ${r.kind==='transfer'?'selected':''}>Umbuchung (ignorieren)</option></select>`;
+  const sums=k=>P.fresh.filter(r=>r.kind===k); const tr=sums('transfer'), fx=sums('fix'), vr=sums('var'), inc=[...sums('in'),...sums('income')];
+  const review=P.fresh.map((r,i)=>({r,i})).filter(({r})=>r.cat==='v-sonst'||r.kind==='in');
+  const body=openSheet('Kontoauszug importieren',`
+    <div class="card"><dl class="kv"><dt>Umsätze im Auszug</dt><dd>${P.all.length}</dd><dt>Schon vorhanden</dt><dd>${P.dupes}</dd><dt>Ausgaben (Haushaltsgeld)</dt><dd>${vr.length} · ${eur0(-vr.reduce((s,r)=>s+r.amount,0))}</dd>
+      <dt>Fixkosten erkannt</dt><dd>${fx.length} · ${eur0(-fx.reduce((s,r)=>s+r.amount,0))}</dd><dt>Einnahmen</dt><dd>${inc.length}</dd><dt>Umbuchungen (ignoriert)</dt><dd>${tr.length}</dd>
+      ${P.newSaldo!=null?`<dt>Kontostand ${fmtDate(P.stmtDate)}</dt><dd>${eur(P.newSaldo)}</dd>`:''}${P.fresh.find(r=>r.kreditSaldo)?`<dt>Restschuld Kredit</dt><dd>${eur(P.fresh.find(r=>r.kreditSaldo).kreditSaldo)}</dd>`:''}</dl></div>
+    ${cards.length?`<h2>Karten zuordnen</h2>${cards.map(c=>`<div class="field"><label>Karte …${c}</label><div class="seg">${[['a',n.a],['b',n.b],['g','Gemeinsam']].map(([k,l])=>`<button data-card="${c}" data-cw="${k}" aria-pressed="${(cfgCards[c]||'g')===k}">${esc(l)}</button>`).join('')}</div></div>`).join('')}`:''}
+    <h2>Bitte prüfen (${review.length})</h2><p class="small muted" style="margin:-6px 0 0">Diese Umsätze konnte die App nicht sicher zuordnen. Deine Wahl merkt sie sich für die nächsten Auszüge.</p>
+    <div class="list">${review.map(({r,i})=>`<div class="item" style="flex-wrap:wrap"><span class="main"><span class="t">${esc(r.party||r.type)}</span><span class="sub">${fmtDate(r.date)} · ${esc(r.type)}</span></span><span class="a num ${r.amount>0?'pos':''}">${eur(r.amount)}</span><div style="width:100%">${catSel(r,i)}</div></div>`).join('')||'<div class="empty">Alles zugeordnet.</div>'}</div>
+    <details class="card" style="padding:14px"><summary class="small">Alle ${P.fresh.length} neuen Umsätze ansehen</summary><div class="list" style="margin-top:10px">${P.fresh.map((r,i)=>`<div class="item" style="flex-wrap:wrap"><span class="main"><span class="t">${esc(r.party||r.type)}</span><span class="sub">${fmtDate(r.date)}${r.card?' · Karte …'+r.card:''}${r.rule?' · '+r.rule:''}</span></span><span class="a num ${r.amount>0?'pos':''}">${eur(r.amount)}</span><div style="width:100%">${catSel(r,i)}</div></div>`).join('')}</div></details>
+    <div class="row-btns"><button class="btn primary" id="imp-go">${P.fresh.length} Umsätze übernehmen</button></div>`);
+  body.addEventListener('change',e=>{ const s=e.target.closest('select[data-ri]'); if(!s) return; const r=P.fresh[+s.dataset.ri]; const v=s.value;
+    if(v==='__skip'){ r.kind='transfer'; r.cat='__skip'; } else if(v==='__in'){ r.kind='in'; r.cat=null; } else { const it=live('items').find(x=>x.id===v); r.cat=v; r.kind=it.kind==='var'?'var':it.kind==='income'?'income':'fix'; }
+    r.learn=true; body.querySelectorAll(`select[data-ri="${s.dataset.ri}"]`).forEach(x=>{ if(x!==s) x.value=v; }); });
+  body.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return;
+    if(b.dataset.card){ const c=b.dataset.card; S.data.config.cards={...(S.data.config.cards||{}),[c]:b.dataset.cw}; body.querySelectorAll(`[data-card="${c}"]`).forEach(x=>x.setAttribute('aria-pressed',x===b)); for(const r of P.fresh) if(r.card===c) r.who=b.dataset.cw; }
+    if(b.id==='imp-go') commitImport(P); }); }
+function commitImport(P){ const now=Date.now(); let n=0; const learned=new Map();
+  for(const r of P.fresh){ if(r.learn){ const key=r.card?norm(r.party).replace(/\d+/g,'').trim():r.amtKey; if(key.length>=3) learned.set(key,r.kind==='transfer'?'__skip':(r.cat||'__in')); }
+    if(r.kind==='transfer') { S.data.tx.push({id:uid(),upd:now,by:meKey(),ext:r.ext,del:true}); continue; } // merkt sich den Umsatz, zeigt ihn aber nicht
+    const t={id:uid(),upd:now,by:meKey(),ext:r.ext,src:'ing',date:r.date,amount:Math.abs(r.amount),type:r.amount>0?'in':'out',cat:(r.kind==='in'?'':r.cat)||'',who:r.who,note:r.party||r.type};
+    S.data.tx.push(t); n++; }
+  for(const [match,cat] of learned){ if(cat==='__in') continue; const ex=live('rules').find(x=>x.match===match); const rec={id:ex?.id||uid(),upd:now,by:meKey(),match,cat}; const i=S.data.rules.findIndex(x=>x.id===rec.id); if(i<0) S.data.rules.push(rec); else S.data.rules[i]=rec; }
+  const c=S.data.config; const ks=P.fresh.find(r=>r.kreditSaldo); if(ks) c.kredit={...c.kredit,override:{amount:ks.kreditSaldo,date:ks.bookDate}};
+  c.lastImport=ym(P.stmtDate||todayISO()); c.upd=now;
+  if(P.newSaldo!=null){ const acc=live('accounts').find(a=>a.id==='k-ing')||live('accounts').find(a=>/ing/i.test(a.name));
+    if(acc){ acc.history=(acc.history||[]).filter(h=>h.date!==P.stmtDate); acc.history.push({date:P.stmtDate||todayISO(),balance:P.newSaldo}); acc.history.sort((a,b)=>a.date.localeCompare(b.date)); acc.upd=now; } }
+  closeSheet(); if(P.stmtDate) S.ui.month=ym(P.stmtDate); changed(); toast(`${n} Umsätze übernommen`); }
+
 /* ============ Oberfläche ============ */
 const SVGA='viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
 const ICON={
@@ -460,8 +573,8 @@ function viewHome(){ const M=S.ui.month; const m=month(M); const today=todayISO(
   const up=[]; for(let k=0;k<3;k++){ const MM=addM(ym(today),k); for(const it of month(MM).due) up.push({M:MM,it}); }
   const upHtml=up.slice(0,6).map(({M:MM,it})=>`<div class="item"><span class="glyph ${it.payer==='g'?'orange':'blue'}">${MSHORT[+MM.slice(5)-1]}</span><span class="main"><span class="t">${esc(it.name)}</span><span class="sub">${mName(MM)} · ${it.payer==='g'?'Rücklagenkonto':esc(who(it.payer))}</span></span><span class="a num">${eur(it.amount)}</span></div>`).join('');
   const recent=[...m.txs].sort((a,b)=>(b.date+b.upd).localeCompare(a.date+a.upd)).slice(0,5);
-  const empty=!live('items').length;
-  return `${empty?`<div class="banner"><p><b>Noch keine Daten.</b> Lade die Startdaten aus eurer Haushaltsaufstellung oder verbinde dich mit dem gemeinsamen Haushaltsbuch unter „Mehr → Google Drive“.</p><button class="btn sm" data-action="import">Startdaten laden</button></div>`:''}${hero}
+  const empty=!live('items').length; const li=S.data.config.lastImport; const needImp=!empty&&(!li||li<addM(ym(today),-1));
+  return `${empty?`<div class="banner"><p><b>Noch keine Daten.</b> Lade die Startdaten aus eurer Haushaltsaufstellung oder verbinde dich mit dem gemeinsamen Haushaltsbuch unter „Mehr → Google Drive“.</p><button class="btn sm" data-action="import">Startdaten laden</button></div>`:''}${needImp?`<div class="banner"><p><b>Neuer Kontoauszug?</b> ${li?`Zuletzt importiert: ${mName(li)}.`:'Importiere den ING-Kontoauszug, dann sortiert die App eure Umsätze automatisch.'}</p><button class="btn sm" data-action="import-ing">Importieren</button></div>`:''}${hero}
     <section class="todo"><div class="top"><b>Kategorien</b><span class="small muted">${MONTHS[+M.slice(5)-1]}</span></div>${catHtml||'<div class="empty">Noch keine Budgets. Lege sie unter „Budget“ an.</div>'}
     ${m.other?`<div class="trow"><span class="glyph">?</span><span class="cmain"><span class="crow"><span>Ohne Kategorie</span><b>${eur0(m.other)}</b></span></span></div>`:''}</section>
     ${tiles}
@@ -474,9 +587,10 @@ function viewTx(){ const M=S.ui.month; let list=live('tx').filter(t=>ym(t.date)=
   list.sort((a,b)=>(b.date+b.upd).localeCompare(a.date+a.upd)); const n=S.data.config.names;
   const out=list.filter(t=>t.type!=='in').reduce((s,t)=>s+t.amount,0), inn=list.filter(t=>t.type==='in').reduce((s,t)=>s+t.amount,0);
   const F=[['all','Alle'],['a',n.a],['b',n.b],['g','Gemeinsam']];
-  let html=`<div class="filters">${F.map(([k,l])=>`<button class="fbtn" aria-pressed="${W===k}" data-who="${k}">${esc(l)}</button>`).join('')}</div>
+  let html=`<div class="row-btns"><button class="btn primary" data-action="import-ing">Kontoauszug importieren</button></div>
+    <div class="filters">${F.map(([k,l])=>`<button class="fbtn" aria-pressed="${W===k}" data-who="${k}">${esc(l)}</button>`).join('')}</div>
     <div class="field"><label for="catf">Kategorie</label><select id="catf"><option value="">Alle Kategorien</option>${live('items').filter(i=>i.kind==='var').map(i=>`<option value="${i.id}" ${S.ui.cat===i.id?'selected':''}>${esc(i.name)}</option>`).join('')}</select></div>
-    <div class="card"><dl class="kv"><dt>Ausgaben</dt><dd>${eur(out)}</dd><dt>Zusätzliche Einnahmen</dt><dd>${eur(inn)}</dd><dt>Buchungen</dt><dd>${list.length}</dd></dl></div>`;
+    <div class="card"><dl class="kv"><dt>Ausgaben</dt><dd>${eur(out)}</dd>${month(M).fixActual?`<dt>davon Fixkosten</dt><dd>${eur(month(M).fixActual)}</dd>`:''}<dt>Zusätzliche Einnahmen</dt><dd>${eur(inn)}</dd><dt>Buchungen</dt><dd>${list.length}</dd></dl></div>`;
   if(!list.length) return html+'<div class="list"><div class="empty">Keine Buchungen für diese Auswahl.</div></div>';
   let cur='',grp=[]; const flush=()=>{ if(grp.length) html+=`<div class="month">${cur}</div><div class="list">${grp.join('')}</div>`; grp=[]; };
   for(const t of list){ const d=new Date(t.date+'T12:00:00').toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long'}); if(d!==cur){ flush(); cur=d; } grp.push(txRow(t)); } flush(); return html; }
@@ -497,7 +611,8 @@ function openTx(id){ const ex=id?live('tx').find(t=>t.id===id):null; const t=ex?
     if(b.dataset.c){ t.cat=b.dataset.c; body.querySelectorAll('[data-c]').forEach(x=>x.setAttribute('aria-pressed',x===b)); }
     if(b.dataset.w){ t.who=b.dataset.w; body.querySelectorAll('[data-w]').forEach(x=>x.setAttribute('aria-pressed',x===b)); }
     if(b.id==='t-save'){ t.amount=parseDe($('#t-amount').value); if(!t.amount){ toast('Bitte einen Betrag eintragen.'); $('#t-amount').focus(); return; } t.date=$('#t-date').value||todayISO(); t.note=$('#t-note').value.trim(); if(t.type==='in') t.cat='';
-      closeSheet(); upsert('tx',t); toast(ex?'Gespeichert':`${eur(t.amount)} gebucht`); }
+      closeSheet(); if(ex&&ex.src==='ing'&&ex.cat!==t.cat&&t.cat){ const key=norm(t.note).replace(/\d+/g,'').trim(); if(key.length>=3){ const r=live('rules').find(x=>x.match===key); S.data.rules=S.data.rules.filter(x=>x!==r); S.data.rules.push({id:r?.id||uid(),upd:Date.now(),by:meKey(),match:key,cat:t.cat}); } }
+      upsert('tx',t); toast(ex?'Gespeichert':`${eur(t.amount)} gebucht`); }
     if(b.id==='t-del'&&await confirmBox('Diese Buchung löschen?','Löschen')){ closeSheet(); remove('tx',t.id); } }); }
 
 const KIND_LABEL={income:'Einnahme',fix:'Fixkosten',var:'Budget (Haushaltsgeld)',save:'Sparen'};
@@ -625,6 +740,7 @@ function bind(){ $('#mPrev').onclick=()=>{ S.ui.month=addM(S.ui.month,-1); rende
   $('#inImport').onchange=async e=>{ const f=e.target.files[0]; e.target.value=''; if(!f) return; try{ const d=JSON.parse(await f.text()); if(!d.items||!d.config) throw 0;
       if(!await confirmBox(`Datei mit ${d.items.length} Posten und ${(d.tx||[]).length} Buchungen laden? Sie wird mit den vorhandenen Daten zusammengeführt.`,'Laden')) return;
       S.data=merge(S.data,{tx:[],goals:[],accounts:[],...d}); changed(); toast('Daten geladen'); }catch(err){ toast('Die Datei ist kein Haushaltsbuch-Backup.'); } };
+  $('#inIng').onchange=async e=>{ const f=e.target.files[0]; e.target.value=''; if(f){ toast('Kontoauszug wird gelesen …'); await importFile(f); } };
   const view=$('#view');
   view.addEventListener('click',async e=>{ const b=e.target.closest('button'); if(!b) return; const d=b.dataset;
     if(d.me){ S.local.me=d.me; S.local.role=S.local.role||(d.me==='a'?'owner':'member'); persist(); render(); syncNow({}); return; }
@@ -642,6 +758,7 @@ function bind(){ $('#mPrev').onclick=()=>{ S.ui.month=addM(S.ui.month,-1); rende
       case 'invite': { const em=$('#inv').value.trim(); if(!/^\S+@\S+\.\S+$/.test(em)) return toast('Bitte eine gültige E-Mail-Adresse eintragen.'); try{ await invite(em); }catch(err){ toast(err.message); } return; }
       case 'export': return download(`haushalt-backup-${todayISO()}.json`,stable(S.data),'application/json');
       case 'import': return $('#inImport').click();
+      case 'import-ing': return $('#inIng').click();
       case 'csv': { const rows=[['Datum','Art','Kategorie','Betrag','Wer','Notiz'],...live('tx').sort((a,b)=>a.date.localeCompare(b.date)).map(t=>[t.date,t.type==='in'?'Einnahme':'Ausgabe',t.type==='in'?'':catName(t.cat),deNum(t.amount),who(t.who),t.note||''])];
         return download(`buchungen-${todayISO()}.csv`,'﻿'+rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(';')).join('\n'),'text/csv'); } } });
   view.addEventListener('change',e=>{ const t=e.target;
