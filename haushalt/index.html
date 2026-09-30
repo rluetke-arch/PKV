@@ -219,6 +219,12 @@ details.inact summary{padding:12px 16px;color:var(--muted);font-size:14px;cursor
 .tab.add .fab{width:46px;height:46px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;margin:-2px 0 1px}
 .tab.add .fab svg{width:24px;height:24px}
 .tab.add{padding-top:4px}
+.hero h3.headline{margin:2px 0 0;font:800 36px/1.1 var(--f-display);letter-spacing:-.02em;white-space:nowrap}
+.hero h3.headline span{font-size:22px;font-weight:700;opacity:.92}
+.hero .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.hero .stats div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.hero .stats b{font:700 19px var(--f-display);font-variant-numeric:tabular-nums;white-space:nowrap}
+.hero .stats span{font-size:13px;color:rgba(255,255,255,.85)}
 .item .ico{flex:none}
 details.rrow{border-top:1px solid var(--line)} details.rrow:first-child{border-top:0}
 details.rrow>summary{display:flex;gap:12px;align-items:center;padding:13px 16px;cursor:pointer;list-style:none}
@@ -250,7 +256,7 @@ details.rrow[open]>summary{background:var(--surface-2)} details.rrow .item{paddi
 
 <script>
 'use strict';
-const APP_VERSION='2.0.2';
+const APP_VERSION='2.0.3';
 const CLIENT_ID='224489061373-shav7m8rhadfbt94lurtvo4nji5mhe8f.apps.googleusercontent.com';
 const API_KEY='AIzaSyAzKcyKQ0mJZN1guXSbB_wnmMk23N_fHbI';        // Google Picker (nur für Anika nötig)
 const PROJECT_NUMBER='224489061373'; // Google-Cloud-Projektnummer
@@ -594,11 +600,12 @@ function viewHome(){ const M=S.ui.month; const n=S.data.config.names; const toda
   let hero;
   if(!r.has){ hero=`<section class="hero"><div class="lbl">Abgleich ${mName(M)}</div><h3>Kein Auszug</h3><p>Für diesen Monat ist noch kein Kontoauszug importiert. Am Monatsanfang den ING-Auszug des Vormonats laden, dann seht ihr hier Plan und Wirklichkeit im Vergleich.</p>
       <div class="row-btns"><button class="btn" data-action="import-ing">Kontoauszug importieren</button></div></section>`; }
-  else { const d=r.istCost-r.planCost; const pct=r.planCost?Math.min(r.istCost/r.planCost,1.5)/1.5*100:0;
-    hero=`<section class="hero"><div class="head"><div><div class="lbl">Abgleich ${mName(M)}</div><h3>${d>0?`${eur0(d)} über Plan`:`${eur0(-d)} unter Plan`}</h3></div>
-      <div class="side"><b>${eur0(r.istCost)}</b><span>ausgegeben · Plan ${eur0(r.planCost)}</span></div></div>
-      <div class="cmp"><div class="row"><span>Ausgaben vom Gemeinschaftskonto</span><b class="num">${Math.round(r.planCost?r.istCost/r.planCost*100:0)} % vom Plan</b><span class="bar"><i style="width:${pct}%"></i></span></div></div>
-      <p>${r.delta>=0?`Das Konto ist in ${MONTHS[+M.slice(5)-1]} um ${eur0(r.delta)} gewachsen.`:`Das Konto ist in ${MONTHS[+M.slice(5)-1]} um ${eur0(-r.delta)} geschrumpft.`} Einzahlungen und Einnahmen: ${eur0(r.pA.net+r.pB.net+r.pG.net+r.istIn)}.</p></section>`; }
+  else { const d=r.istCost-r.planCost; const pct=r.planCost?Math.min(r.istCost/r.planCost,1)*100:0;
+    hero=`<section class="hero"><div class="lbl">Abgleich ${mName(M)}</div>
+      <h3 class="headline">${eur0(Math.abs(d))} <span>${d>0?'über Plan':'unter Plan'}</span></h3>
+      <div class="stats"><div><b>${eur0(r.istCost)}</b><span>ausgegeben</span></div><div><b>${eur0(r.planCost)}</b><span>Plan</span></div><div><b>${Math.round(r.planCost?r.istCost/r.planCost*100:0)} %</b><span>vom Plan</span></div></div>
+      <span class="bar" style="display:block"><i style="width:${pct}%"></i></span>
+      <p>${r.delta>=0?`Das Gemeinschaftskonto ist im ${MONTHS[+M.slice(5)-1]} um ${eur0(r.delta)} gewachsen.`:`Das Gemeinschaftskonto ist im ${MONTHS[+M.slice(5)-1]} um ${eur0(-r.delta)} geschrumpft.`} Einzahlungen und Einnahmen: ${eur0(r.pA.net+r.pB.net+r.pG.net+r.istIn)}.</p></section>`; }
   const groups=r.has?[['Fixkosten',r.G.fix],['Haushaltsgeld',r.G.var],['Unregelmäßig (Rücklage)',r.G.rueck]]:[];
   const looseSum=r.loose.reduce((s,t)=>s+t.amount,0);
   const grpHtml=r.has?`<section class="todo"><div class="top"><b>Plan und Ist</b><span class="small muted">${MONTHS[+M.slice(5)-1]}</span></div>
