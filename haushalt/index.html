@@ -225,6 +225,30 @@ details.inact summary{padding:12px 16px;color:var(--muted);font-size:14px;cursor
 .hero .stats div{display:flex;flex-direction:column;gap:2px;min-width:0}
 .hero .stats b{font:700 19px var(--f-display);font-variant-numeric:tabular-nums;white-space:nowrap}
 .hero .stats span{font-size:13px;color:rgba(255,255,255,.85)}
+
+.chart{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 12px 10px}
+.chart figcaption{display:flex;gap:14px;font-size:13px;color:var(--muted);margin:0 0 6px 4px}
+.chart figcaption span{display:inline-flex;align-items:center;gap:6px}
+.chart svg{width:100%;height:auto;display:block}
+.chart .grid{stroke:var(--line);stroke-width:1}
+.chart .axis{fill:var(--muted);font-size:10px;font-family:var(--f-body)}
+.chart .bar-ist{fill:var(--accent)} .chart .hit.on .bar-ist{fill:#7FBDFF}
+.chart .plan-tick{stroke:var(--ink);stroke-width:2;stroke-linecap:round;opacity:.85}
+.chart .bal-line{fill:none;stroke:var(--good);stroke-width:2;stroke-linejoin:round}
+.chart .dot{fill:var(--good);stroke:var(--sheet);stroke-width:2} .chart .hit.on .dot{r:6}
+.chart .tip{font-size:13px;color:var(--ink);min-height:18px;margin:6px 4px 0}
+.lg-ist{width:12px;height:12px;border-radius:3px;background:var(--accent);display:inline-block}
+.lg-plan{width:14px;height:2px;background:var(--ink);display:inline-block}
+.lg-line{width:14px;height:2px;background:var(--good);display:inline-block}
+.lock{position:fixed;inset:0;z-index:100;background:var(--bg) linear-gradient(165deg,var(--bg) 0%,var(--bg-2) 55%,var(--bg-3) 100%);display:flex;align-items:center;justify-content:center;padding:24px}
+.lockin{display:flex;flex-direction:column;align-items:center;gap:16px;width:100%;max-width:320px}
+.lockin h3{margin:0;font:700 20px var(--f-display)}
+.lockin .dots{display:flex;gap:16px} .lockin .dots i{width:14px;height:14px;border-radius:50%;border:2px solid var(--muted)} .lockin .dots i.on{background:var(--ink);border-color:var(--ink)}
+.lockin .dots.shake{animation:shake .4s} @keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.lockmsg{margin:0;min-height:18px;color:var(--bad);font-size:14px}
+.pad{display:grid;grid-template-columns:repeat(3,72px);gap:14px}
+.pad button{width:72px;height:72px;border-radius:50%;border:1px solid var(--line);background:var(--surface);font:500 28px var(--f-display)}
+.pad button:active{background:var(--accent-soft)}
 .item .ico{flex:none}
 details.rrow{border-top:1px solid var(--line)} details.rrow:first-child{border-top:0}
 details.rrow>summary{display:flex;gap:12px;align-items:center;padding:13px 16px;cursor:pointer;list-style:none}
@@ -256,7 +280,7 @@ details.rrow[open]>summary{background:var(--surface-2)} details.rrow .item{paddi
 
 <script>
 'use strict';
-const APP_VERSION='2.0.3';
+const APP_VERSION='2.1.0';
 const CLIENT_ID='224489061373-shav7m8rhadfbt94lurtvo4nji5mhe8f.apps.googleusercontent.com';
 const API_KEY='AIzaSyAzKcyKQ0mJZN1guXSbB_wnmMk23N_fHbI';        // Google Picker (nur für Anika nötig)
 const PROJECT_NUMBER='224489061373'; // Google-Cloud-Projektnummer
@@ -355,7 +379,7 @@ function netWorth(){ const acc=live('accounts'); const last=a=>a.history?.length
 /* ============ Abgleich Plan ↔ Kontoauszug ============ */
 function importedMonths(){ return [...new Set(live('tx').filter(t=>t.src==='ing').map(t=>ym(t.date)))].sort(); }
 function recon(M){ const items=live('items'); const byId=Object.fromEntries(items.map(i=>[i.id,i]));
-  const txs=live('tx').filter(t=>ym(t.date)===M); const out=txs.filter(t=>t.type==='out'), inn=txs.filter(t=>t.type==='in'), tr=txs.filter(t=>t.type==='transfer');
+  const txs=live('tx').filter(t=>ym(t.date)===M); const outAll=txs.filter(t=>t.type==='out'); const once=outAll.filter(t=>t.once); const out=outAll.filter(t=>!t.once); const inn=txs.filter(t=>t.type==='in'), tr=txs.filter(t=>t.type==='transfer');
   const sumT=a=>a.reduce((s,t)=>s+t.amount,0);
   const person=k=>{ const i=sumT(tr.filter(t=>t.who===k&&t.dir==='in')), o=sumT(tr.filter(t=>t.who===k&&t.dir!=='in')); return {in:i,out:o,net:i-o}; };
   const act=items.filter(i=>active(i,M));
@@ -368,10 +392,10 @@ function recon(M){ const items=live('items'); const byId=Object.fromEntries(item
   const loose=out.filter(t=>!known.has(t.cat)); const looseIn=inn.filter(t=>!inc.some(r=>r.id===t.cat));
   const g=a=>({plan:a.reduce((s,r)=>s+r.plan,0),ist:a.reduce((s,r)=>s+r.ist,0)});
   const G={fix:g(fix),var:g(vr),rueck:g(rueck),inc:g(inc)};
-  const planCost=G.fix.plan+G.var.plan+G.rueck.plan, istCost=sumT(out);
+  const onceSum=sumT(once); const planCost=G.fix.plan+G.var.plan+G.rueck.plan, istCost=sumT(outAll);
   const pA=person('a'), pB=person('b'), pG=person('g');
-  return {M,has:txs.length>0,fix,var:vr,rueck,inc,loose,looseIn,G,planCost,istCost,istIn:sumT(inn),pA,pB,pG,
-    delta:pA.net+pB.net+pG.net+sumT(inn)-istCost, regular:istCost-G.rueck.ist}; }
+  return {M,has:txs.length>0,once,onceSum,fix,var:vr,rueck,inc,loose,looseIn,G,planCost,istCost,istIn:sumT(inn),pA,pB,pG,
+    delta:pA.net+pB.net+pG.net+sumT(inn)-istCost, regular:istCost-G.rueck.ist-onceSum}; }
 function recommend(M){ const months=importedMonths().filter(x=>x<=M).slice(-3); if(!months.length) return null;
   const rs=months.map(recon); const avg=f=>rs.reduce((s,r)=>s+f(r),0)/rs.length;
   const m=month(M); const regular=avg(r=>r.regular); const need=regular+m.rueck-m.incG;
@@ -379,6 +403,73 @@ function recommend(M){ const months=importedMonths().filter(x=>x<=M).slice(-3); 
   return {months,regular,rueck:m.rueck,incG:m.incG,need,recA,recB,planA,planB,shareA:m.shareA,actA:avg(r=>r.pA.net),actB:avg(r=>r.pB.net),
     varAvg:Object.fromEntries(live('items').filter(i=>i.kind==='var').map(i=>[i.id,avg(r=>(r.var.find(x=>x.id===i.id)?.ist)||0)])),
     looseAvg:avg(r=>r.loose.reduce((s,t)=>s+t.amount,0))}; }
+
+/* ============ Verlauf (Diagramme) ============ */
+function historyData(){ const ms=importedMonths().slice(-12); return ms.map(M=>{ const r=recon(M); const ing=live('accounts').find(a=>a.id==='k-ing'); const h=(ing?.history||[]).filter(x=>ym(x.date)===M).pop();
+  return {M,plan:r.planCost,ist:r.istCost,once:r.onceSum,bal:h?h.balance:null}; }); }
+function niceMax(v){ if(v<=0) return 100; const p=Math.pow(10,Math.floor(Math.log10(v))); const n=v/p; return (n<=1?1:n<=2?2:n<=2.5?2.5:n<=5?5:10)*p; }
+function chartPlanIst(data){ if(data.length<1) return '';
+  const W=340,H=190,L=44,R=8,T=12,B=26, iw=W-L-R, ih=H-T-B; const max=niceMax(Math.max(...data.map(d=>Math.max(d.plan,d.ist)))*1.05);
+  const y=v=>T+ih-(v/max)*ih; const step=iw/data.length; const bw=Math.min(22,step*0.55);
+  const ticks=[0,max/2,max].map(v=>`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" class="grid"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end" class="axis">${Math.round(v).toLocaleString('de-DE')}</text>`).join('');
+  const bars=data.map((d,i)=>{ const cx=L+step*i+step/2, x=cx-bw/2, h=Math.max(y(0)-y(d.ist),1); const over=d.ist>d.plan;
+    return `<g class="hit" data-tip="${esc(`${mName(d.M)}: Ist ${eur0(d.ist)} · Plan ${eur0(d.plan)}${d.once?` · davon einmalig ${eur0(d.once)}`:''} · ${over?`${eur0(d.ist-d.plan)} über Plan`:`${eur0(d.plan-d.ist)} unter Plan`}`)}">
+      <rect x="${cx-step/2}" y="${T}" width="${step}" height="${ih}" fill="transparent"/>
+      <path d="M${x},${y(0)} v${-(h-4)} q0,-4 4,-4 h${bw-8} q4,0 4,4 v${h-4} z" class="bar-ist"/>
+      <line x1="${x-4}" x2="${x+bw+4}" y1="${y(d.plan)}" y2="${y(d.plan)}" class="plan-tick"/>
+      <text x="${cx}" y="${H-8}" text-anchor="middle" class="axis">${MSHORT[+d.M.slice(5)-1]}</text></g>`; }).join('');
+  return `<figure class="chart"><figcaption><span><i class="lg-ist"></i>Ist</span><span><i class="lg-plan"></i>Plan</span></figcaption>
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Ausgaben je Monat, Ist gegen Plan">${ticks}${bars}</svg><div class="tip" aria-live="polite">Monat antippen für Details</div></figure>`; }
+function chartBalance(data){ const pts=data.filter(d=>d.bal!=null); if(pts.length<2) return '';
+  const W=340,H=130,L=44,R=12,T=12,B=26, iw=W-L-R, ih=H-T-B; const vals=pts.map(d=>d.bal); const lo=Math.min(0,...vals), hi=niceMax(Math.max(...vals)*1.1);
+  const y=v=>T+ih-((v-lo)/(hi-lo))*ih; const x=i=>L+(pts.length===1?iw/2:iw*i/(pts.length-1));
+  const line=pts.map((d,i)=>`${i?'L':'M'}${x(i)},${y(d.bal)}`).join(' ');
+  const ticks=[lo,hi].map(v=>`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" class="grid"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end" class="axis">${Math.round(v).toLocaleString('de-DE')}</text>`).join('');
+  const dots=pts.map((d,i)=>`<g class="hit" data-tip="${esc(`${mName(d.M)}: Kontostand ${eur(d.bal)}`)}"><circle cx="${x(i)}" cy="${y(d.bal)}" r="14" fill="transparent"/><circle cx="${x(i)}" cy="${y(d.bal)}" r="${i===pts.length-1?5:3.5}" class="dot"/><text x="${x(i)}" y="${H-8}" text-anchor="middle" class="axis">${MSHORT[+d.M.slice(5)-1]}</text></g>`).join('');
+  return `<figure class="chart"><figcaption><span><i class="lg-line"></i>Kontostand Gemeinschaftskonto (€)</span></figcaption><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Kontostand je Monat">${ticks}<path d="${line}" class="bal-line"/>${dots}</svg><div class="tip" aria-live="polite">Punkt antippen für Details</div></figure>`; }
+
+/* ============ Daueraufträge ============ */
+function standingDetected(){ const ms=importedMonths(); const M=ms[ms.length-1]; if(!M) return null;
+  const tr=live('tx').filter(t=>ym(t.date)===M&&t.type==='transfer'&&t.dir==='in');
+  const reg=t=>/dauerauftrag/i.test(t.bt||'')||/fixkosten/i.test(t.pz||'');
+  const f=k=>{ const list=tr.filter(t=>t.who===k&&reg(t)); return {sum:list.reduce((s,t)=>s+t.amount,0),list}; };
+  return {M,a:f('a'),b:f('b')}; }
+function standing(){ const c=S.data.config.standing||{}; const d=standingDetected();
+  const get=k=>c[k]!=null?{amount:c[k],src:'manuell'}:(d&&d[k].sum?{amount:d[k].sum,src:`erkannt ${mName(d.M)}`,parts:d[k].list}:null);
+  return {a:get('a'),b:get('b')}; }
+function standingCard(rec){ if(!rec) return ''; const n=S.data.config.names; const st=standing();
+  const row=(k,recv)=>{ const cur=st[k]; const target=Math.ceil(recv/5)*5; const diff=cur?target-cur.amount:null;
+    return `<div class="item"><span class="main"><span class="t">${esc(n[k])}</span><span class="sub">${cur?(cur.parts&&cur.parts.length>1?cur.parts.map(t=>eur0(t.amount)).join(' + ')+' · ':'')+cur.src:'nicht erkannt'}</span></span>
+      <span class="r"><span class="a num">${cur?eur0(cur.amount)+' → ':''}${eur0(target)}</span><span class="pill ${diff==null?'mut':Math.abs(diff)<5?'good':'warn'}">${diff==null?'empfohlen':Math.abs(diff)<5?'passt':(diff>0?'+':'−')+eur0(Math.abs(diff))}</span></span></div>`; };
+  const any=st.a||st.b; const both=[['a',rec.recA],['b',rec.recB]].map(([k,v])=>({k,v,cur:st[k],d:st[k]?Math.ceil(v/5)*5-st[k].amount:0}));
+  const msg=both.filter(x=>x.cur&&Math.abs(x.d)>=5).map(x=>`${n[x.k]}: Dauerauftrag ${x.d>0?'um '+eur0(x.d)+' erhöhen':'um '+eur0(-x.d)+' senken'} auf ${eur0(Math.ceil(x.v/5)*5)}`);
+  return `<section class="card" style="display:flex;flex-direction:column;gap:12px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>Dauerauftrags-Check</b><button class="btn sm ghost" data-action="edit-standing">Bearbeiten</button></div>
+    ${any?`<div class="${msg.length?'hint warn':'hint good'}">${msg.length?msg.map(esc).join('<br>'):'Eure Daueraufträge passen zur Empfehlung.'}</div>`:'<div class="hint">Noch keine Daueraufträge erkannt. Trag eure aktuellen Beträge über „Bearbeiten“ ein.</div>'}
+    <div class="list">${row('a',rec.recA)}${row('b',rec.recB)}</div>
+    <p class="small muted" style="margin:0">„Aktuell“ erkennt die App aus dem letzten Kontoauszug: Daueraufträge und Überweisungen mit dem Zweck „Fixkosten“. Die Empfehlung ist auf 5 € aufgerundet.</p></section>`; }
+function editStanding(){ const n=S.data.config.names; const c=S.data.config.standing||{}; const d=standingDetected();
+  const body=openSheet('Daueraufträge',`<p class="small muted" style="margin:0">Leer lassen, dann nimmt die App den Wert aus dem letzten Kontoauszug${d?` (${mName(d.M)})`:''}.</p>
+    <div class="grid2"><div class="field"><label for="so-a">${esc(n.a)} (€ / Monat)</label><input id="so-a" inputmode="decimal" value="${c.a!=null?deNum(c.a):''}" placeholder="${d&&d.a.sum?deNum(d.a.sum):''}"></div>
+    <div class="field"><label for="so-b">${esc(n.b)} (€ / Monat)</label><input id="so-b" inputmode="decimal" value="${c.b!=null?deNum(c.b):''}" placeholder="${d&&d.b.sum?deNum(d.b.sum):''}"></div></div>
+    <div class="row-btns"><button class="btn primary" id="so-save">Speichern</button></div>`);
+  body.querySelector('#so-save').onclick=()=>{ const a=parseDe($('#so-a').value), b=parseDe($('#so-b').value); closeSheet(); setConfig(c=>{ c.standing={}; if(a!=null) c.standing.a=a; if(b!=null) c.standing.b=b; }); toast('Gespeichert'); }; }
+
+/* ============ PIN-Sperre (nur dieses Gerät) ============ */
+async function sha(s){ const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join(''); }
+const pinSet=()=>!!lsGet('hh.pin');
+async function pinCheck(p){ return (await sha((lsGet('hh.pinSalt')||'')+p))===lsGet('hh.pin'); }
+async function pinSave(p){ const salt=uid(); lsSet('hh.pinSalt',salt); lsSet('hh.pin',await sha(salt+p)); }
+function pinPad(title,onDone){ let v=''; const o=document.createElement('div'); o.className='lock'; o.id='lock';
+  o.innerHTML=`<div class="lockin"><img class="appicon" alt="" src="${document.querySelector('.appicon')?.src||''}"><h3>${esc(title)}</h3><div class="dots">${'<i></i>'.repeat(4)}</div><p class="lockmsg"></p>
+    <div class="pad">${[1,2,3,4,5,6,7,8,9,'',0,'⌫'].map(k=>k===''?'<span></span>':`<button data-k="${k}" aria-label="${k==='⌫'?'Löschen':k}">${k}</button>`).join('')}</div></div>`;
+  const upd=()=>o.querySelectorAll('.dots i').forEach((d,i)=>d.classList.toggle('on',i<v.length));
+  o.addEventListener('click',async e=>{ const b=e.target.closest('[data-k]'); if(!b) return; const k=b.dataset.k;
+    if(k==='⌫') v=v.slice(0,-1); else if(v.length<4) v+=k; upd();
+    if(v.length===4){ const ok=await onDone(v); if(ok===false){ o.querySelector('.dots').classList.add('shake'); o.querySelector('.lockmsg').textContent='Falsche PIN'; setTimeout(()=>{ v=''; upd(); o.querySelector('.dots').classList.remove('shake'); },450); } else o.remove(); } });
+  document.body.appendChild(o); return o; }
+let hiddenAt=0;
+function lockNow(){ if(!pinSet()||$('#lock')) return; pinPad('PIN eingeben',async p=>await pinCheck(p)?true:false); }
+function setupPin(){ pinPad('Neue PIN wählen',async p1=>{ setTimeout(()=>pinPad('PIN wiederholen',async p2=>{ if(p1!==p2){ toast('Die PINs stimmen nicht überein.'); return true; } await pinSave(p1); toast('PIN-Sperre ist aktiv.'); render(); return true; }),50); return true; }); }
 
 /* ============ Google Drive (gemeinsame Datei) ============ */
 const SCOPE='https://www.googleapis.com/auth/drive.file';
@@ -528,6 +619,7 @@ async function importFile(file){ let parsed=null;
   catch(e){ toast('Die Datei konnte nicht gelesen werden: '+(e.message||e)); return; }
   if(!parsed||!parsed.rows.length){ toast('Keine Umsätze gefunden. Ist das ein ING-Kontoauszug (PDF) oder ING-CSV?'); return; }
   const have=new Set(S.data.tx.map(t=>t.ext).filter(Boolean));
+  { let patched=0; const byExt=new Map(S.data.tx.filter(t=>t.ext&&!t.del).map(t=>[t.ext,t])); for(const raw of parsed.rows){ const c=classify(raw); const t=byExt.get(c.ext); if(t&&!t.bt){ t.bt=c.type; t.pz=(c.purpose||'').slice(0,60); t.upd=Date.now(); patched++; } } if(patched){ S.local.dirty=true; persist(); scheduleSync(1500); } }
   const all=parsed.rows.map(classify); const fresh=all.filter(r=>!have.has(r.ext));
   showImport({...parsed,all,fresh,dupes:all.length-fresh.length,name:file.name}); }
 function showImport(P){ const n=S.data.config.names; const vars=live('items').filter(i=>i.kind==='var'); const fixes=live('items').filter(i=>i.kind==='fix'||i.kind==='income');
@@ -552,7 +644,7 @@ function showImport(P){ const n=S.data.config.names; const vars=live('items').fi
     if(b.id==='imp-go') commitImport(P); }); }
 function commitImport(P){ const now=Date.now(); let n=0; const learned=new Map();
   for(const r of P.fresh){ if(r.learn){ const key=r.card?norm(r.party).replace(/\d+/g,'').trim():r.amtKey; if(key.length>=3) learned.set(key,r.kind==='transfer'?'__skip':(r.cat||'__in')); }
-    const t={id:uid(),upd:now,by:meKey(),ext:r.ext,src:'ing',date:r.date,amount:Math.abs(r.amount),type:r.kind==='transfer'?'transfer':r.amount>0?'in':'out',dir:r.amount>0?'in':'out',cat:(r.kind==='in'||r.kind==='transfer'?'':r.cat)||'',who:r.who,note:r.party||r.type};
+    const t={id:uid(),upd:now,by:meKey(),ext:r.ext,src:'ing',bt:r.type,pz:(r.purpose||'').slice(0,60),date:r.date,amount:Math.abs(r.amount),type:r.kind==='transfer'?'transfer':r.amount>0?'in':'out',dir:r.amount>0?'in':'out',cat:(r.kind==='in'||r.kind==='transfer'?'':r.cat)||'',who:r.who,note:r.party||r.type};
     S.data.tx.push(t); n++; }
   for(const [match,cat] of learned){ if(cat==='__in') continue; const ex=live('rules').find(x=>x.match===match); const rec={id:ex?.id||uid(),upd:now,by:meKey(),match,cat}; const i=S.data.rules.findIndex(x=>x.id===rec.id); if(i<0) S.data.rules.push(rec); else S.data.rules[i]=rec; }
   const c=S.data.config; const ks=P.fresh.find(r=>r.kreditSaldo); if(ks) c.kredit={...c.kredit,override:{amount:ks.kreditSaldo,date:ks.bookDate}};
@@ -604,7 +696,7 @@ function viewHome(){ const M=S.ui.month; const n=S.data.config.names; const toda
     hero=`<section class="hero"><div class="lbl">Abgleich ${mName(M)}</div>
       <h3 class="headline">${eur0(Math.abs(d))} <span>${d>0?'über Plan':'unter Plan'}</span></h3>
       <div class="stats"><div><b>${eur0(r.istCost)}</b><span>ausgegeben</span></div><div><b>${eur0(r.planCost)}</b><span>Plan</span></div><div><b>${Math.round(r.planCost?r.istCost/r.planCost*100:0)} %</b><span>vom Plan</span></div></div>
-      <span class="bar" style="display:block"><i style="width:${pct}%"></i></span>
+      <span class="bar" style="display:block"><i style="width:${pct}%"></i></span>${r.onceSum?`<p class="note" style="margin:0">Davon einmalig: ${eur0(r.onceSum)}. Diese Ausgaben zählen nicht in den Durchschnitt.</p>`:''}
       <p>${r.delta>=0?`Das Gemeinschaftskonto ist im ${MONTHS[+M.slice(5)-1]} um ${eur0(r.delta)} gewachsen.`:`Das Gemeinschaftskonto ist im ${MONTHS[+M.slice(5)-1]} um ${eur0(-r.delta)} geschrumpft.`} Einzahlungen und Einnahmen: ${eur0(r.pA.net+r.pB.net+r.pG.net+r.istIn)}.</p></section>`; }
   const groups=r.has?[['Fixkosten',r.G.fix],['Haushaltsgeld',r.G.var],['Unregelmäßig (Rücklage)',r.G.rueck]]:[];
   const looseSum=r.loose.reduce((s,t)=>s+t.amount,0);
@@ -630,11 +722,12 @@ function viewHome(){ const M=S.ui.month; const n=S.data.config.names; const toda
       <div class="row-btns"><button class="btn" data-action="adopt-budgets">Budgets an den Durchschnitt anpassen</button></div></section>`:'';
   const tile=(ic,col,title,pairs,attr='')=>`<${attr?'button':'div'} class="tile" ${attr}><div class="th"><span class="ico ${col}">${ic}</span><span>${title}</span></div><dl>${pairs.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl></${attr?'button':'div'}>`;
   const tiles=`<div class="tiles">${tile(ICON.bank,'blue','Konto',[['Stand',last?eur0(last.balance):'–'],['vom',last?fmtDate(last.date):'–']])}${kr?tile(ICON.house,'violet','Kredit',[['Restschuld',eur0(kr.balance)],['Getilgt',Math.round(kr.progress*100)+' %']],'data-go="kredit"'):''}</div>`;
-  return top+hero+grpHtml+catHtml+recHtml+pay+devHtml+tiles; }
+  const hist=historyData(); const histHtml=hist.length?`<h2>Verlauf</h2>${chartPlanIst(hist)}${chartBalance(hist)}`:'';
+  return top+hero+grpHtml+catHtml+recHtml+standingCard(rec)+histHtml+pay+devHtml+tiles; }
 
 function txRow(t){ const isIn=t.type==='in', isTr=t.type==='transfer'; const sign=isIn||(isTr&&t.dir==='in')?'+':'−';
   const label=isTr?`Umbuchung ${t.dir==='in'?'von':'an'} ${who(t.who)}`:isIn?(t.cat?catName(t.cat):'Einnahme'):catName(t.cat);
-  return `<button class="item" data-tx="${t.id}"><span class="glyph ${isTr?'violet':isIn?'green':catColor(t.cat)}">${isTr?'⇄':isIn?'+':esc(initials(catName(t.cat)))}</span><span class="main"><span class="t">${esc(t.note||label)}</span><span class="sub">${fmtDate(t.date)} · ${esc(label)}${!isTr&&t.who!=='g'?' · '+esc(who(t.who)):''}</span></span><span class="a num ${sign==='+'?'pos':''}">${sign}${eur(t.amount)}</span></button>`; }
+  return `<button class="item" data-tx="${t.id}"><span class="glyph ${isTr?'violet':isIn?'green':catColor(t.cat)}">${isTr?'⇄':isIn?'+':esc(initials(catName(t.cat)))}</span><span class="main"><span class="t">${esc(t.note||label)}</span><span class="sub">${fmtDate(t.date)} · ${t.once?'einmalig · ':''}${esc(label)}${!isTr&&t.who!=='g'?' · '+esc(who(t.who)):''}</span></span><span class="a num ${sign==='+'?'pos':''}">${sign}${eur(t.amount)}</span></button>`; }
 function viewTx(){ const M=S.ui.month; const r=recon(M);
   let html=`<div class="row-btns"><button class="btn primary" data-action="import-ing">Kontoauszug importieren</button></div>`;
   if(!r.has) return html+`<div class="list"><div class="empty">Für ${mName(M)} ist noch kein Kontoauszug importiert.</div></div>`;
@@ -643,6 +736,7 @@ function viewTx(){ const M=S.ui.month; const r=recon(M);
   const tr=live('tx').filter(t=>ym(t.date)===M&&t.type==='transfer').sort((a,b)=>a.date.localeCompare(b.date));
   html+=`<div class="card"><dl class="kv"><dt>Ausgaben</dt><dd>${eur(r.istCost)}</dd><dt>Plan</dt><dd>${eur(r.planCost)}</dd><dt>Abweichung</dt><dd class="${r.istCost>r.planCost?'neg':'pos'}">${r.istCost>=r.planCost?'+':'−'}${eur(Math.abs(r.istCost-r.planCost))}</dd></dl></div>`;
   html+=sec('Fixkosten',r.fix)+sec('Haushaltsgeld',r.var,'Budget')+sec('Unregelmäßig (Rücklage)',r.rueck,'fällig');
+  if(r.once.length) html+=`<h2>Einmalige Ausgaben</h2><p class="small muted" style="margin:-6px 0 0">Zählen nicht in den Durchschnitt für Budgets und Überweisungen.</p><div class="list">${r.once.map(txRow).join('')}</div>`;
   if(r.loose.length) html+=`<h2>Nicht im Plan</h2><p class="small muted" style="margin:-6px 0 0">Tippen, um eine Kategorie zu wählen. Die App merkt sich das.</p><div class="list">${r.loose.map(txRow).join('')}</div>`;
   html+=sec('Einnahmen',r.inc,'erwartet'); if(r.looseIn.length) html+=`<div class="list">${r.looseIn.map(txRow).join('')}</div>`;
   if(tr.length) html+=`<h2>Umbuchungen</h2><p class="small muted" style="margin:-6px 0 0">Ein- und Auszahlungen zwischen euren Konten. Sie zählen nicht als Ausgaben.</p><div class="list">${[['a',r.pA],['b',r.pB],['g',r.pG]].filter(([,x])=>x.in||x.out).map(([k,x])=>`<details class="rrow"><summary><span class="main"><span class="t">${esc(who(k))}</span><span class="sub">eingezahlt ${eur(x.in)} · zurück ${eur(x.out)}</span></span><span class="r"><span class="a num">${eur(x.net)}</span><span class="sub">netto</span></span></summary>${tr.filter(t=>t.who===k).map(txRow).join('')}</details>`).join('')}</div>`;
@@ -656,11 +750,12 @@ function openTx(id){ const ex=live('tx').find(t=>t.id===id); if(!ex) return; con
   const body=openSheet('Umsatz',`<div class="card"><dl class="kv"><dt>${esc(t.note||'Umsatz')}</dt><dd>${eur(t.amount)}</dd><dt>Datum</dt><dd>${fmtDate(t.date)}</dd></dl></div>
     <div class="field"><label for="t-cat">Zuordnung</label><select id="t-cat">${opts}</select></div>
     <div class="field"><label>${t.type==='transfer'?'Von / an':'Wer'}</label><div class="seg">${[['a',n.a],['b',n.b],['g','Gemeinsam']].map(([k,l])=>`<button data-w="${k}" aria-pressed="${t.who===k}">${esc(l)}</button>`).join('')}</div></div>
-    <label class="small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="t-learn" checked> Für künftige Auszüge merken</label>
+    ${t.type==='out'?`<label class="small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="t-once" ${t.once?'checked':''}> Einmalige Ausgabe (zählt nicht in den Durchschnitt für Budgets und Überweisungen)</label>`:''}
+    <label class="small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="t-learn" checked> Zuordnung für künftige Auszüge merken</label>
     <div class="row-btns"><button class="btn primary" id="t-save">Speichern</button></div><button class="btn danger ghost" id="t-del">Umsatz ausblenden</button>`);
   body.addEventListener('click',async e=>{ const b=e.target.closest('button'); if(!b) return;
     if(b.dataset.w){ t.who=b.dataset.w; body.querySelectorAll('[data-w]').forEach(x=>x.setAttribute('aria-pressed',x===b)); }
-    if(b.id==='t-save'){ const v=$('#t-cat').value; const wasIn=ex.type==='in'||(ex.type==='transfer'&&ex.dir==='in');
+    if(b.id==='t-save'){ const v=$('#t-cat').value; const oc=$('#t-once'); if(oc){ if(oc.checked) t.once=true; else delete t.once; } const wasIn=ex.type==='in'||(ex.type==='transfer'&&ex.dir==='in');
       if(v==='__tr'){ t.type='transfer'; t.dir=wasIn?'in':'out'; t.cat=''; }
       else if(v==='__in'){ t.type='in'; t.cat=''; }
       else { const it=items.find(i=>i.id===v); t.cat=v; t.type=it.kind==='income'?'in':(wasIn&&it.kind!=='var'&&it.kind!=='fix'?'in':(wasIn?'in':'out')); }
@@ -744,6 +839,8 @@ function viewMore(){ const c=S.data.config; const n=c.names; const kr=kredit(); 
       <div class="field"><label>Weiterleitungs-URL</label><code class="sel">${esc(redirectUri())}</code></div></div></details>`;
   const rpRows=rp.rows.map(r=>`<tr class="${r.bal<0?'negrow':''}"><td>${MSHORT[+r.M.slice(5)-1]} ${r.M.slice(2,4)}</td><td>+${eur0(r.dep)}</td><td>${r.out?'−'+eur0(r.out):''}</td><td>${rp.known?eur0(r.bal):'–'}</td></tr>`).join('');
   return `<div class="list"><button class="item" data-me-switch><span class="ico violet">${ICON.user}</span><span class="main"><span class="t">Dieses Handy gehört ${esc(who(L.me))}</span><span class="sub">Tippen zum Wechseln</span></span></button></div>
+    <h2>PIN-Sperre</h2><section class="card" style="display:flex;flex-direction:column;gap:10px"><p class="small" style="margin:0">${pinSet()?'Aktiv. Die App fragt beim Öffnen und nach einer Minute im Hintergrund nach der PIN.':'Schützt das Haushaltsbuch auf diesem Handy mit einer 4-stelligen PIN. Jede Person legt ihre eigene PIN fest.'}</p>
+      <div class="row-btns">${pinSet()?'<button class="btn" data-action="pin-set">PIN ändern</button><button class="btn danger" data-action="pin-off">PIN-Sperre ausschalten</button>':'<button class="btn primary" data-action="pin-set">PIN festlegen</button>'}</div></section>
     <h2 id="rueck">Rücklagen-Planer</h2><section class="card" style="display:flex;flex-direction:column;gap:12px">
       <div class="grid2"><div class="field"><label for="c-rueck">Kontostand Rücklage (€)</label><input id="c-rueck" data-c="rueck.amount" inputmode="decimal" value="${c.rueck.amount!=null?deNum(c.rueck.amount):''}"></div><div class="field"><label for="c-rueckd">Stand vom</label><input id="c-rueckd" type="date" data-c="rueck.date" value="${esc(c.rueck.date)}"></div></div>
       ${rp.known&&rp.min<0?`<div class="hint warn">Im ${mName(rp.rows.find(r=>r.bal===rp.min).M)} reicht die Rücklage nicht (${eur0(rp.min)}). Erhöht die monatliche Einzahlung oder legt einmalig etwas nach.</div>`:''}
@@ -799,6 +896,7 @@ function bind(){ $('#mPrev').onclick=()=>{ S.ui.month=addM(S.ui.month,-1); rende
       S.data=merge(S.data,{tx:[],goals:[],accounts:[],...d}); changed(); toast('Daten geladen'); }catch(err){ toast('Die Datei ist kein Haushaltsbuch-Backup.'); } };
   $('#inIng').onchange=async e=>{ const f=e.target.files[0]; e.target.value=''; if(f){ toast('Kontoauszug wird gelesen …'); await importFile(f); } };
   const view=$('#view');
+  view.addEventListener('click',e=>{ const g=e.target.closest('.hit'); if(!g) return; const fig=g.closest('figure'); fig.querySelectorAll('.hit.on').forEach(x=>x.classList.remove('on')); g.classList.add('on'); fig.querySelector('.tip').textContent=g.dataset.tip; });
   view.addEventListener('click',async e=>{ const b=e.target.closest('button'); if(!b) return; const d=b.dataset;
     if(d.me){ S.local.me=d.me; S.local.role=S.local.role||(d.me==='a'?'owner':'member'); persist(); render(); syncNow({}); return; }
     if(b.hasAttribute('data-me-switch')){ S.local.me=S.local.me==='a'?'b':'a'; persist(); render(); return toast(`Dieses Handy gehört jetzt ${who(S.local.me)}.`); }
@@ -817,6 +915,9 @@ function bind(){ $('#mPrev').onclick=()=>{ S.ui.month=addM(S.ui.month,-1); rende
       case 'export': return download(`haushalt-backup-${todayISO()}.json`,stable(S.data),'application/json');
       case 'import': return $('#inImport').click();
       case 'import-ing': return $('#inIng').click();
+      case 'edit-standing': return editStanding();
+      case 'pin-set': return setupPin();
+      case 'pin-off': { if(!await confirmBox('PIN-Sperre auf diesem Handy ausschalten?','Ausschalten')) return; lsSet('hh.pin',null); lsSet('hh.pinSalt',null); render(); return toast('PIN-Sperre ist aus.'); }
       case 'adopt-budgets': { const rec=recommend(S.ui.month); if(!rec) return; const ch=live('items').filter(i=>i.kind==='var'&&Math.abs(Math.ceil((rec.varAvg[i.id]||0)/10)*10-i.amount)>=10);
         if(!ch.length) return toast('Die Budgets passen schon zum Durchschnitt.');
         if(!await confirmBox(`${ch.length} Budgets auf den gerundeten Durchschnitt der letzten ${rec.months.length} Monate setzen? ${ch.map(i=>`${i.name}: ${eur0(i.amount)} → ${eur0(Math.ceil((rec.varAvg[i.id]||0)/10)*10)}`).join(' · ')}`,'Anpassen')) return;
@@ -830,7 +931,7 @@ function bind(){ $('#mPrev').onclick=()=>{ S.ui.month=addM(S.ui.month,-1); rende
       setConfig(c=>{ let o=c; for(const k of path.slice(0,-1)){ if(o[k]==null) o[k]={}; o=o[k]; } o[path[path.length-1]]=val; }); toast('Gespeichert'); return; }
     if(t.dataset.l){ S.local[t.dataset.l]=t.value.trim(); persist(); toast('Gespeichert'); } });
   view.addEventListener('toggle',e=>{ const k=e.target.dataset?.open; if(k){ e.target.open?S.ui.open.add(k):S.ui.open.delete(k); } },true);
-  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') syncNow({}); });
+  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') hiddenAt=Date.now(); else { if(hiddenAt&&Date.now()-hiddenAt>60000) lockNow(); syncNow({}); } });
   setInterval(()=>{ if(document.visibilityState==='visible'&&tokenValid()) syncNow({}); },90000);
   addEventListener('online',()=>syncNow({})); }
 
@@ -842,7 +943,7 @@ function bind(){ $('#mPrev').onclick=()=>{ S.ui.month=addM(S.ui.month,-1); rende
   if(IN_PREVIEW&&!S.local.me) S.local.me='a';
   { const e=S.data.items.find(i=>i.id==='a-etf'&&i.name==='ETF-Sparplan (PKV)'); if(e){ e.name='ETF-Sparplan'; e.upd=Date.now(); S.local.dirty=true; persist(); } }
   S.ui.month=importedMonths().slice(-1)[0]||addM(ym(todayISO()),-1);
-  bind(); render();
+  bind(); render(); if(pinSet()) lockNow();
   if(auth==='ok') toast('Mit Google verbunden'); else if(auth&&auth!=='state') setSync('auth','Google-Anmeldung: '+auth);
   if(!IN_PREVIEW&&'serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
   const last=+(lsGet('hh.silentAt')||0);
