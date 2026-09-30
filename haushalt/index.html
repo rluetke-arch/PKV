@@ -244,7 +244,7 @@ details.inact summary{padding:12px 16px;color:var(--muted);font-size:14px;cursor
 
 <script>
 'use strict';
-const APP_VERSION='1.1.0';
+const APP_VERSION='1.1.1';
 const CLIENT_ID='224489061373-shav7m8rhadfbt94lurtvo4nji5mhe8f.apps.googleusercontent.com';
 const API_KEY='';        // Google Picker (nur für Anika nötig)
 const PROJECT_NUMBER=''; // Google-Cloud-Projektnummer
@@ -679,6 +679,7 @@ function viewMore(){ const c=S.data.config; const n=c.names; const kr=kredit(); 
     <dl class="kv"><dt>Rolle</dt><dd>${L.role==='member'?'Mitglied':'Besitzer'}</dd><dt>Status</dt><dd>${esc({ok:'synchron',auth:'Anmeldung nötig',join:'nicht verbunden',offline:'offline',error:'Fehler',running:'läuft',idle:'–'}[SYNC.state]||SYNC.state)}</dd><dt>Letzte Synchronisierung</dt><dd>${L.lastSync?new Date(L.lastSync).toLocaleString('de-DE'):'–'}</dd></dl>
     ${SYNC.msg?`<div class="hint warn">${esc(SYNC.msg)}</div>`:''}
     <div class="row-btns"><button class="btn primary" data-action="sync">${tokenValid()?'Jetzt synchronisieren':'Mit Google verbinden'}</button>${L.me==='b'||L.role==='member'?`<button class="btn" data-action="pick">Haushaltsbuch von ${esc(n.a)} öffnen</button>`:''}</div>
+    ${L.role==='member'?`<button class="btn ghost" data-action="own">Stattdessen gemeinsames Google-Konto nutzen</button><p class="small muted" style="margin:0">Wenn ihr beide in der App dasselbe Google-Konto verwendet (zum Beispiel ein eigenes Haushaltskonto), findet die App die Daten automatisch. Einladen und Dateiauswahl sind dann nicht nötig.</p>`:''}
     ${L.role!=='member'?`<div class="field"><label for="inv">${esc(n.b)} einladen (Gmail-Adresse)</label><input id="inv" inputmode="email" autocomplete="off" placeholder="name@gmail.com"></div><button class="btn" data-action="invite">Einladung senden</button>${(L.invited||[]).length?`<p class="small muted" style="margin:0">Eingeladen: ${L.invited.map(esc).join(', ')}</p>`:''}`:''}
     <details class="card" data-open="gkeys" ${S.ui.open.has('gkeys')?'open':''} style="padding:0;border:0;background:none"><summary class="small">Google-Einstellungen</summary><div style="display:flex;flex-direction:column;gap:10px">
       <div class="field"><label for="l-email">Dein Google-Konto (optional)</label><input id="l-email" data-l="email" value="${esc(L.email)}" inputmode="email"></div>
@@ -755,6 +756,7 @@ function bind(){ $('#mPrev').onclick=()=>{ S.ui.month=addM(S.ui.month,-1); rende
     switch(d.action){
       case 'sync': return syncNow({interactive:true});
       case 'pick': return pickShared();
+      case 'own': { S.local.role='owner'; S.local.fileId=null; S.local.folders=null; persist(); render(); return syncNow({interactive:true}); }
       case 'invite': { const em=$('#inv').value.trim(); if(!/^\S+@\S+\.\S+$/.test(em)) return toast('Bitte eine gültige E-Mail-Adresse eintragen.'); try{ await invite(em); }catch(err){ toast(err.message); } return; }
       case 'export': return download(`haushalt-backup-${todayISO()}.json`,stable(S.data),'application/json');
       case 'import': return $('#inImport').click();
