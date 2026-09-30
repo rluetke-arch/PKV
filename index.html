@@ -93,12 +93,13 @@ h2{font:700 20px var(--f-display);margin:8px 0 0;letter-spacing:-.01em}
 .trow.zero{color:var(--muted)}
 /* Kacheln */
 .tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+button.tile{text-align:left;color:inherit;width:100%}
 .tile{padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
 .tile .th{display:flex;align-items:center;gap:10px;font:700 16px var(--f-display);min-width:0}
 .tile .th .ico{width:36px;height:36px;border-radius:11px}
 .tile .th>span:last-child{overflow-wrap:anywhere}
 .tile dl{margin:0;display:grid;grid-template-columns:1fr auto;gap:8px 8px;font-size:14.5px}
-.tile dt{color:var(--muted)} .tile dd{margin:0;text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.tile dt{color:var(--muted)} .tile dd{margin:0;text-align:right;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
 .meter{height:6px;border-radius:99px;background:rgba(255,255,255,.1);overflow:hidden}
 .meter i{display:block;height:100%;border-radius:99px;background:var(--accent)}
 .meter.green i{background:var(--good)} .meter.violet i{background:var(--violet)} .meter.warn i{background:var(--warn)}
@@ -204,7 +205,7 @@ input[type=checkbox]{accent-color:var(--accent);width:18px;height:18px}
   <button class="tab" data-tab="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v9h9A9 9 0 1 1 12 3z"/><path d="M15.5 3.7A9 9 0 0 1 20.3 8.5h-4.8z"/></svg>Übersicht</button>
   <button class="tab" data-tab="bills"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4.5 6h.01M4.5 12h.01M4.5 18h.01" stroke-width="2.6"/></svg>Rechnungen</button>
   <button class="tab" data-tab="scan" aria-label="Rechnung scannen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.8l1.6-2h4.2l1.6 2h1.8A2.5 2.5 0 0 1 20 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5z"/><circle cx="12" cy="13" r="3.6"/></svg>Scan</button>
-  <button class="tab" data-tab="vorsorge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.4-7-10.2A4.3 4.3 0 0 1 12 7a4.3 4.3 0 0 1 7 3.8C19 16.6 12 21 12 21z"/><path d="M9.5 12.5l1.8 1.8 3.2-3.6"/></svg>Vorsorge</button>
+  <button class="tab" data-tab="sparplan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>Sparplan</button>
   <button class="tab" data-tab="more"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Mehr</button>
 </div></nav>
 <input type="file" id="inCamera" accept="image/*" capture="environment" hidden>
@@ -215,7 +216,7 @@ input[type=checkbox]{accent-color:var(--accent);width:18px;height:18px}
 <script>
 'use strict';
 /* ============ Grundlagen ============ */
-const APP_VERSION = '1.1.1';
+const APP_VERSION = '1.2.0';
 const IN_PREVIEW = (()=>{ try{ return window.top!==window.self || /claude\.ai|claudeusercontent|anthropic/.test(location.hostname); }catch(e){ return true; } })();
 const $ = (s,r=document)=>r.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -272,7 +273,7 @@ const DEFAULT_DEADLINES = [
   {id:'befreiung', title:'Befreiungsantrag nach § 8 SGB V bei der AOK', date:'2027-03-31', note:'Sonst wirst du ab 01.01.2027 wieder gesetzlich versichert.', done:false}
 ];
 
-const S = { settings:{...DEFAULT_SETTINGS}, bills:[], files:[], vorsorge:[], deadlines:[], years:{}, sync:{}, app:{demo:false},
+const S = { settings:{...DEFAULT_SETTINGS}, bills:[], files:[], vorsorge:[], deadlines:[], years:{}, plan:null, sync:{}, app:{demo:false},
   ui:{tab:'home', year:null, filter:'all', q:'', open:new Set()} };
 
 const startYear = () => +S.settings.startDate.slice(0,4);
@@ -369,7 +370,7 @@ const DB = { db:null, ok:false, mem:{bills:new Map(),files:new Map(),blobs:new M
   async del(s,id){ if(!this.ok){ this.mem[s].delete(id); return; } try{ await this._p(this.db.transaction(s,'readwrite').objectStore(s).delete(id)); }catch(e){} },
   async clear(s){ if(!this.ok){ this.mem[s].clear(); return; } try{ await this._p(this.db.transaction(s,'readwrite').objectStore(s).clear()); }catch(e){} }
 };
-async function saveMeta(id){ const map={settings:S.settings, vorsorge:{items:S.vorsorge}, deadlines:{items:S.deadlines}, years:{data:S.years}, sync:S.sync, app:S.app};
+async function saveMeta(id){ const map={settings:S.settings, vorsorge:{items:S.vorsorge}, deadlines:{items:S.deadlines}, years:{data:S.years}, plan:S.plan, sync:S.sync, app:S.app};
   await DB.put('meta',{...map[id], id}); }
 async function loadAll(){
   await DB.open();
@@ -379,6 +380,8 @@ async function loadAll(){
   S.vorsorge=m.vorsorge?.items || DEFAULT_VORSORGE.map(x=>({...x}));
   S.deadlines=m.deadlines?.items || DEFAULT_DEADLINES.map(x=>({...x}));
   S.years=m.years?.data || {};
+  { const D=JSON.parse(JSON.stringify(DEFAULT_PLAN)); const mp=m.plan?(({id,...r})=>r)(m.plan):{};
+    S.plan={...D,...mp, gkv:{...D.gkv,...(mp.gkv||{})}, pkv:{...D.pkv,...(mp.pkv||{})}}; }
   S.sync=m.sync ? (({id,...r})=>r)(m.sync) : {dirty:false, trash:[]};
   S.sync.trash=S.sync.trash||[];
   S.app=m.app ? (({id,...r})=>r)(m.app) : null;
@@ -532,7 +535,7 @@ function driveName(b,f){ const d=billDate(b)||todayISO(); const base=`${d}_${saf
   return (f.kind==='bescheid'?'Bescheid_':'')+base+(S.files.filter(x=>x.billId===b.id&&x.kind===f.kind).length>1?'_'+f.id.slice(-4):'')+'.pdf'; }
 function backupData(){ return {app:'PKV Belegbuch', version:1, exportedAt:new Date().toISOString(),
   settings:(({clientId,...r})=>r)(S.settings), bills:S.bills.filter(b=>!b.demo), files:S.files.map(({id,billId,kind,mime,name,size,createdAt,driveId})=>({id,billId,kind,mime,name,size,createdAt,driveId})),
-  vorsorge:S.vorsorge, deadlines:S.deadlines, years:S.years}; }
+  vorsorge:S.vorsorge, deadlines:S.deadlines, years:S.years, plan:S.plan}; }
 async function writeBackup(){ const sy=S.sync; const blob=new Blob([JSON.stringify(backupData(),null,1)],{type:'application/json'});
   if(sy.backupId){ try{ await gfetch(`https://www.googleapis.com/upload/drive/v3/files/${sy.backupId}?uploadType=media`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:blob}); }catch(e){ if(e.status===404) sy.backupId=null; else throw e; } }
   if(!sy.backupId){ const r=await driveUpload({name:'pkv-backup-aktuell.json',mime:'application/json',blob,parents:[sy.folders.backup],appProperties:{pkvapp:'backup'}}); sy.backupId=r.id; }
@@ -577,8 +580,8 @@ async function applyBackup(data,label){
   await DB.clear('bills'); await DB.clear('files');
   S.bills=data.bills; S.files=data.files||[]; for(const b of S.bills) await DB.put('bills',b); for(const f of S.files) await DB.put('files',f);
   const cid=S.settings.clientId; S.settings={...DEFAULT_SETTINGS,...(data.settings||{}), clientId:cid};
-  S.vorsorge=data.vorsorge||S.vorsorge; S.deadlines=data.deadlines||S.deadlines; S.years=data.years||{}; S.app.demo=false;
-  for(const k of ['settings','vorsorge','deadlines','years','app']) await saveMeta(k);
+  S.vorsorge=data.vorsorge||S.vorsorge; S.deadlines=data.deadlines||S.deadlines; S.years=data.years||{}; if(data.plan) S.plan={...S.plan,...data.plan}; S.app.demo=false;
+  for(const k of ['settings','vorsorge','deadlines','years','plan','app']) await saveMeta(k);
   S.ui.year=defaultYear(); render(); toast('Wiederhergestellt. PDFs werden beim Öffnen aus Drive geladen.'); }
 
 /* ============ Kalender (.ics) & Export ============ */
@@ -596,6 +599,108 @@ async function shareBlob(blob,name){ try{ const file=new File([blob],name,{type:
 function csvExport(){ const rows=[['Behandlungsdatum','Rechnungsdatum','Anbieter','Kategorie','Betrag','Bezahlt','Eingereicht','Erstattet am','Erstattung','Notiz']];
   for(const b of S.bills.filter(b=>!b.demo).sort(byDate)) rows.push([billDate(b),b.invoiceDate||'',b.provider||'',CATS[b.category]?.label||'',deNum(b.amount),b.paidDate||'',b.submittedDate||'',b.refundedDate||'',b.refundAmount!=null?deNum(b.refundAmount):'',b.note||'']);
   download(`belegbuch-${todayISO()}.csv`,'\ufeff'+rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(';')).join('\n'),'text/csv'); }
+
+/* ============ Sparplan (Unterschied zur GKV + fester Aufschlag) ============ */
+const DEFAULT_PLAN = {
+  gross:6145, salaries:13, extra:150, current:225, net:true, withCosts:false, returnPct:5,
+  gkv:{general:14.6, zusatz:2.99, avgZusatz:2.9, bbg:6374, bbgPV:7050, pv:3.6, children:2, zahnzusatz:27.96},
+  pkv:{kv:619.16, besi:136.08, ktg:40.46, ekh:12.32, pvn:71.87, zuschlag:61.92, ekhZuschuss:false},
+  depotIst:null, depotDate:'',
+  rates:[{from:'2026-10', rate:225}],
+  history:[{date:'2026-12-01', total:941.81, note:'Vertragsbeginn'}]
+};
+function planCalc(){
+  const P=S.plan, g=P.gkv, k=P.pkv, st=S.settings;
+  const yearly=(P.gross||0)*(P.salaries||12);
+  const baseKV=Math.min(yearly, g.bbg*12)/12, basePV=Math.min(yearly, g.bbgPV*12)/12;
+  const kids=Math.max(0,Math.min(5,g.children|0));
+  const pvAnRate=g.pv/2 + (kids===0?0.6:0) - Math.max(0,kids-1)*0.25;
+  const gKV=baseKV*(g.general+g.zusatz)/200, gPV=basePV*pvAnRate/100, gZahn=g.zahnzusatz||0;
+  const gTotal=gKV+gPV+gZahn;
+  const premium=k.kv+k.besi+k.ktg+k.ekh+k.pvn+k.zuschlag;
+  const agKV=Math.min((k.kv+k.besi+k.ktg+k.zuschlag+(k.ekhZuschuss?k.ekh:0))/2, g.bbg*(g.general+g.avgZusatz)/200);
+  const agPV=Math.min(k.pvn/2, g.bbgPV*g.pv/200);
+  const ag=agKV+agPV, eigen=premium-ag;
+  const t=(st.taxRate||0)/100, bs=(st.basisShare||80)/100;
+  const taxG=(gKV*0.96+gPV)*t;
+  const taxP=Math.max(bs*(k.kv+k.besi+k.zuschlag)+k.pvn-ag,0)*t;
+  const netG=gTotal-taxG, netP=eigen-taxP;
+  // tatsächliche Eigenkosten des laufenden Jahres (optional)
+  const Y=Math.max(new Date().getFullYear(),startYear()); const a=analyzeYear(Y);
+  const months=Y===startYear()?(13-startMonth()):Math.max(1,new Date().getMonth()+1);
+  const costs=Math.max(a.sum-a.refunded,0)/months - (a.claimed?0:a.bonus/12);
+  let delta=P.net?(netG-netP):(gTotal-eigen);
+  if(P.withCosts) delta-=costs;
+  const rate=Math.round(Math.max(delta,0)+(P.extra||0));
+  return {baseKV,basePV,pvAnRate,gKV,gPV,gZahn,gTotal,premium,agKV,agPV,ag,eigen,taxG,taxP,netG,netP,delta,rate,costs,Y};
+}
+const ym=d=>d.slice(0,7);
+function monthsBetween(a,b){ const [y1,m1]=a.split('-').map(Number), [y2,m2]=b.split('-').map(Number); return (y2-y1)*12+(m2-m1); }
+function depotSoll(){ const P=S.plan; const r=(P.returnPct||0)/100/12; const now=ym(todayISO()); let v=0, paid=0;
+  const rates=[...P.rates].sort((a,b)=>a.from.localeCompare(b.from)); if(!rates.length) return {v:0,paid:0};
+  let m=rates[0].from; let guard=0;
+  while(m<=now && guard++<1200){ const cur=rates.filter(x=>x.from<=m).pop(); v=v*(1+r)+(cur?cur.rate:0); paid+=(cur?cur.rate:0); const d=new Date(m+'-15'); d.setMonth(d.getMonth()+1); m=isoLocal(d).slice(0,7); }
+  return {v:Math.round(v), paid}; }
+function projection67(rate){ const b=S.settings.birth; if(!b) return null; const P=S.plan; const r=(P.returnPct||0)/100/12;
+  const end=(+b.slice(0,4)+67)+b.slice(4,7); const n=Math.max(monthsBetween(ym(todayISO()),end),0);
+  const start=P.depotIst!=null?P.depotIst:depotSoll().v; const fv=start*Math.pow(1+r,n)+(r?rate*(Math.pow(1+r,n)-1)/r:rate*n);
+  return {fv:Math.round(fv), real:Math.round(fv/Math.pow(1.02,n/12)), years:Math.round(n/12)}; }
+function premiumCagr(){ const h=[...S.plan.history].sort((a,b)=>a.date.localeCompare(b.date)); if(h.length<2) return null;
+  const f=h[0], l=h[h.length-1]; const yrs=(new Date(l.date)-new Date(f.date))/31557600000; if(yrs<0.5) return null; return (Math.pow(l.total/f.total,1/yrs)-1)*100; }
+
+function setPlanRate(r){ const m=ym(todayISO()); S.plan.current=r; S.plan.rates=S.plan.rates.filter(x=>x.from!==m); S.plan.rates.push({from:m,rate:r}); }
+function viewSparplan(){ const P=S.plan, c=planCalc(), st=S.settings; const diff=c.rate-(P.current||0);
+  const soll=depotSoll(), pr=projection67(c.rate), cagr=premiumCagr();
+  const status=Math.abs(diff)<5?'<span class="pill good">passt</span>':diff>0?`<span class="pill warn">um ${eur0(diff)} erhöhen</span>`:`<span class="pill mut">${eur0(-diff)} mehr als nötig</span>`;
+  const pf=(path,label,unit='')=>{ const v=path.split('.').reduce((o,k)=>o[k],P); return `<div class="field"><label for="p-${path}">${label}${unit?` (${unit})`:''}</label><input id="p-${path}" data-p="${path}" inputmode="decimal" value="${v==null?'':String(v).replace('.',',')}"></div>`; };
+  const row=(k,v,cls='')=>`<dt${cls?` class="${cls}"`:''}>${k}</dt><dd${cls?` class="${cls}"`:''}>${v}</dd>`;
+  return `<section class="hero" aria-label="Empfohlene Sparrate">
+      <div class="head"><div><div class="lbl">Empfohlene Sparrate</div><h3>${eur0(c.rate)}<span style="font-size:20px;font-weight:600"> / Monat</span></h3></div>
+      <div class="side"><b>${eur0(Math.max(c.delta,0))}</b><span>Unterschied zur GKV</span></div></div>
+      <p>${eur0(Math.max(c.delta,0))} spart dich die PKV gegenüber der GKV${P.net?' nach Steuer':''}. Dazu kommen ${eur0(P.extra)} fester Aufschlag für höhere PKV-Beiträge im Alter.</p>
+      <div class="row-btns"><button class="btn" data-action="plan-apply">${eur0(c.rate)} als neuen Sparplan übernehmen</button></div>
+    </section>
+    <section class="card" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><b>Dein Sparplan aktuell</b>${status}</div>
+      <div class="grid2">${pf('current','Monatliche Rate','€')}${pf('extra','Fester Aufschlag','€')}</div>
+      <label class="small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-pc="net" ${P.net?'checked':''}> Nach Steuer vergleichen (empfohlen)</label>
+      <label class="small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-pc="withCosts" ${P.withCosts?'checked':''}> Eigene Arztkosten und Bonus ${c.Y} einrechnen (Ø ${eur0(c.costs)} im Monat)</label>
+    </section>
+    <h2>GKV und PKV im Vergleich</h2>
+    <div class="tiles">
+      <div class="tile"><div class="th"><span class="ico orange">${ICON.kit}</span><span>GKV</span></div><dl>
+        ${row('Kranken­versicherung',eur0(c.gKV))}${row('Pflege',eur0(c.gPV))}${row('Zahn­zusatz',eur0(c.gZahn))}${row('Vom Konto',eur0(c.gTotal))}${P.net?row('Steuervorteil',`−${eur0(c.taxG)}`)+row('<b>Netto</b>',`<b>${eur0(c.netG)}</b>`):''}</dl></div>
+      <div class="tile"><div class="th"><span class="ico blue">${ICON.kit}</span><span>PKV</span></div><dl>
+        ${row('Beitrag',eur0(c.premium))}${row('Arbeitgeber',`−${eur0(c.ag)}`)}${row('Vom Konto',eur0(c.eigen))}${P.net?row('Steuervorteil',`−${eur0(c.taxP)}`)+row('<b>Netto</b>',`<b>${eur0(c.netP)}</b>`):''}</dl></div>
+    </div>
+    <p class="small muted" style="margin:0">GKV: dein Arbeitnehmeranteil mit ${String(c.pvAnRate.toFixed(2)).replace('.',',')} % Pflege (${P.gkv.children} Kinder) und Beitragsbemessungsgrenze. PKV: Zuschuss hälftig, höchstens bis zum GKV-Höchstzuschuss. Die Abbuchung durch die SIGNAL IDUNA ist der volle Beitrag, der Zuschuss kommt mit dem Gehalt.</p>
+    <h2>Depot</h2>
+    <section class="card" style="display:flex;flex-direction:column;gap:12px">
+      <dl class="kv">${row('Eingezahlt seit '+fmtDate(P.rates.map(r=>r.from).sort()[0]+'-01').slice(3),eur0(soll.paid))}${row(`Soll-Wert heute (${P.returnPct} % Rendite)`,eur0(soll.v))}
+        ${P.depotIst!=null?row('Ist-Wert'+(P.depotDate?' ('+fmtDate(P.depotDate)+')':''),eur0(P.depotIst))+row('Abweichung',`${P.depotIst-soll.v>=0?'+':''}${eur0(P.depotIst-soll.v)}`):''}
+        ${pr?row(`Mit 67 (in ${pr.years} Jahren)`,eur0(pr.fv))+row('in heutiger Kaufkraft',eur0(pr.real)):''}</dl>
+      <div class="grid2">${pf('depotIst','Depotwert laut Trade Republic','€')}<div class="field"><label for="p-depotDate">Stand vom</label><input id="p-depotDate" type="date" data-pd="depotDate" value="${esc(P.depotDate)}"></div></div>
+      ${pr?'':'<div class="hint">Trag unter „Mehr → Tarif-Einstellungen“ dein Geburtsdatum ein, dann rechnet die App den Depotwert mit 67 aus.</div>'}
+      <p class="small muted" style="margin:0">Projektion vor Steuern, mit der empfohlenen Rate und ${P.returnPct} % Rendite im Jahr. Keine Garantie.</p>
+    </section>
+    <details class="card" data-open="rates" ${S.ui.open.has('rates')?'open':''}><summary>Verlauf deiner Sparrate</summary>
+      <div class="list">${[...P.rates].sort((a,b)=>b.from.localeCompare(a.from)).map(r=>`<div class="item"><span class="main"><span class="t">${eur0(r.rate)} im Monat</span><span class="sub">ab ${fmtDate(r.from+'-01').slice(3)}</span></span></div>`).join('')}</div></details>
+    <details class="card" data-open="pkvb" ${S.ui.open.has('pkvb')?'open':''}><summary>Dein PKV-Beitrag</summary><div style="display:flex;flex-direction:column;gap:12px">
+      <div class="grid2">${pf('pkv.kv','KOMFORT-SI 1','€')}${pf('pkv.besi','BE-SI','€')}${pf('pkv.ktg','Krankentagegeld','€')}${pf('pkv.ekh','EKH','€')}${pf('pkv.pvn','Pflege (PVN)','€')}${pf('pkv.zuschlag','Vorsorgezuschlag','€')}</div>
+      <label class="small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-pc="pkv.ekhZuschuss" ${P.pkv.ekhZuschuss?'checked':''}> Arbeitgeber bezuschusst auch EKH</label>
+      <div class="grid2"><div class="field"><label for="ph-date">Beitragsanpassung ab</label><input id="ph-date" type="date" value="${todayISO()}"></div><div class="field"><label>&nbsp;</label><button class="btn" data-action="plan-hist">Als Anpassung speichern</button></div></div>
+      <div class="list">${[...P.history].sort((a,b)=>b.date.localeCompare(a.date)).map(h=>`<div class="item"><span class="main"><span class="t">${eur(h.total)}</span><span class="sub">ab ${fmtDate(h.date)}${h.note?' · '+esc(h.note):''}</span></span></div>`).join('')}</div>
+      ${cagr!=null?`<div class="hint ${cagr>4?'warn':'good'}">Ø Beitragssteigerung bisher ${cagr.toFixed(1).replace('.',',')} % im Jahr. Unsere Rechnung ging von 4 % aus.</div>`:'<div class="hint">Trag hier jede Beitragsanpassung ein. Die App vergleicht die Steigerung dann mit den 4 %, mit denen wir gerechnet haben.</div>'}
+    </div></details>
+    <details class="card" data-open="gkva" ${S.ui.open.has('gkva')?'open':''}><summary>Annahmen Gehalt & GKV</summary><div style="display:flex;flex-direction:column;gap:12px">
+      <div class="grid2">${pf('gross','Bruttogehalt','€/Monat')}${pf('salaries','Gehälter pro Jahr')}</div>
+      <div class="grid2">${pf('gkv.general','Allg. Beitragssatz','%')}${pf('gkv.zusatz','Zusatzbeitrag AOK','%')}</div>
+      <div class="grid2">${pf('gkv.avgZusatz','Ø Zusatzbeitrag (Zuschuss)','%')}${pf('gkv.pv','Pflege gesamt','%')}</div>
+      <div class="grid2">${pf('gkv.bbg','Bemessungsgrenze KV','€/Monat')}${pf('gkv.bbgPV','Bemessungsgrenze PV','€/Monat')}</div>
+      <div class="grid2">${pf('gkv.children','Kinder unter 25')}${pf('gkv.zahnzusatz','Zahnzusatz in der GKV','€')}</div>
+      ${pf('returnPct','Angenommene Rendite','% p. a.')}
+      <div class="hint">Werte für 2027 nach dem Stand des Gesetzentwurfs. Prüf sie jeden Januar: Gehalt, Zusatzbeitrag, Bemessungsgrenzen und deinen neuen PKV-Beitrag.</div>
+    </div></details>`; }
 
 /* ============ Oberfläche ============ */
 function defaultYear(){ if(S.app?.demo) return 2027; return Math.max(new Date().getFullYear(), startYear()); }
@@ -635,6 +740,7 @@ const ICON={
   heart:`<svg ${SVGA}><path d="M12 20s-7-4.4-7-10A4.2 4.2 0 0 1 12 7a4.2 4.2 0 0 1 7 3c0 5.6-7 10-7 10z"/></svg>`,
   kit:`<svg ${SVGA}><rect x="3" y="7" width="18" height="13" rx="3"/><path d="M9 7V5.2A1.2 1.2 0 0 1 10.2 4h3.6A1.2 1.2 0 0 1 15 5.2V7M12 10.5v6M9 13.5h6"/></svg>`,
   star:`<svg ${SVGA}><path d="M12 3.5l2.6 5.3 5.8.9-4.2 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.2-4.1 5.8-.9z"/></svg>`,
+  trend:`<svg ${SVGA}><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>`,
   tooth:`<svg ${SVGA}><path d="M8 4C5.4 4 4 5.9 4 8.4c0 2.8 1.6 4 2.1 6.8.5 2.6 1 4.8 2.2 4.8s1.4-2.6 2-4.6c.4-1.3 1-1.6 1.7-1.6s1.3.3 1.7 1.6c.6 2 .8 4.6 2 4.6s1.7-2.2 2.2-4.8c.5-2.8 2.1-4 2.1-6.8C20 5.9 18.6 4 16 4c-1.7 0-2.6 1-4 1S9.7 4 8 4z"/></svg>`
 };
 function viewHome(){ const Y=S.ui.year; const a=analyzeYear(Y); const st=S.settings; const v=a.verdict; const today=todayISO();
@@ -664,11 +770,11 @@ function viewHome(){ const Y=S.ui.year; const a=analyzeYear(Y); const st=S.setti
     ${rows.map(([ic,col,n,lbl,attr])=>`<button class="trow ${n?'':'zero'}" ${attr}><span class="ico plain ${col}" style="color:var(--${{orange:'warn',blue:'accent',violet:'violet',red:'bad',green:'good'}[col]})">${ic}</span><span><span class="n">${n}</span> ${esc(lbl(n))}</span></button>`).join('')}</section>`;
   const sbPct=a.SB?Math.min(a.sbBen/a.SB,1)*100:0, vPct=Math.min(a.vUsed/st.vorsorgeBudget,1)*100;
   const zInf=a.zahn.limit===Infinity;
-  const tile=(ic,col,title,pairs,pct,mcls)=>`<div class="tile"><div class="th"><span class="ico ${col}">${ic}</span><span>${title}</span></div><dl>${pairs.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl><div class="meter ${mcls||''}"><i style="width:${pct}%"></i></div></div>`;
+  const tile=(ic,col,title,pairs,pct,mcls,attr)=>`<${attr?'button':'div'} class="tile" ${attr||''}><div class="th"><span class="ico ${col}">${ic}</span><span>${title}</span></div><dl>${pairs.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl><div class="meter ${mcls||''}"><i style="width:${pct}%"></i></div></${attr?'button':'div'}>`;
   const tiles=`<div class="tiles">
     ${tile(ICON.kit,'blue','Selbstbehalt',[['Verbraucht',eur0(a.sbUsed)],['Noch offen',eur0(Math.max(a.SB-a.sbUsed,0))]],sbPct)}
     ${tile(ICON.star,'violet','Bonus',[['Stufe',a.claimed?'–':`${Math.min(a.streak+1,3)} von 3`],['Betrag',a.claimed?'verloren':eur0(a.bonus)]],a.claimed?0:Math.min((a.streak+1)/3,1)*100,'violet')}
-    ${tile(ICON.heart,'green','Vorsorge',[['Genutzt',eur0(a.vUsed)],['Frei',eur0(a.vLeft)]],vPct,'green')}
+    ${tile(ICON.heart,'green','Vorsorge',[['Genutzt',eur0(a.vUsed)],['Frei',eur0(a.vLeft)]],vPct,'green','data-tab-go="vorsorge"')}
     ${tile(ICON.tooth,'blue','Zahn',[['Genutzt',eur0(a.zahn.used)],['Übrig',zInf?'unbegrenzt':eur0(a.zahn.left)]],zInf?0:Math.min(a.zahn.used/a.zahn.limit,1)*100,!zInf&&a.zahn.left<150?'warn':'')}
   </div>`;
   const nx=unpaid[0];
@@ -676,7 +782,8 @@ function viewHome(){ const Y=S.ui.year; const a=analyzeYear(Y); const st=S.setti
     :`<div class="glass allclear"><svg width="54" height="54" viewBox="0 0 24 24" aria-hidden="true"><path fill="var(--good)" d="M12 1.5l2.4 1.8 3-.2 1 2.8 2.6 1.5-.6 2.9 1.4 2.7-2 2.2.1 3-2.9.7-1.6 2.6-2.8-1-2.8 1-1.6-2.6-2.9-.7.1-3-2-2.2 1.4-2.7-.6-2.9L5.6 5.9l1-2.8 3 .2z"/><path d="M8 12.3l2.7 2.7L16.3 9.4" fill="none" stroke="#0A1426" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><b>Keine offenen Rechnungen</b><span class="muted small">Alles bezahlt. Neue Rechnungen erfasst du über „Scan“.</span></div>`;
   const yb=S.bills.filter(b=>billYear(b)===Y);
   return `${S.app.demo?`<div class="banner"><p><b>Das sind Beispieldaten.</b> So sieht das Belegbuch mit ein paar Rechnungen aus. Deine eigenen Daten beginnen, sobald du die Beispiele löschst.</p><button class="btn sm" data-action="clear-demo">Beispiele löschen</button></div>`:''}
-    ${hero}${todo}${tiles}${next}
+    ${hero}${todo}${tiles}${next}${(()=>{ const pc=planCalc(); const d=pc.rate-(S.plan.current||0);
+      return `<button class="glass wide" data-tab-go="sparplan"><span class="ico green">${ICON.trend}</span><span class="main"><span class="t">Sparplan</span><span class="sub">${Math.abs(d)<5?'passt zu deiner Rate':d>0?`um ${eur0(d)} erhöhen`:`${eur0(-d)} über dem Nötigen`}</span></span><span class="big">${eur0(pc.rate)}</span></button>`; })()}
     <h2>${Y} in Zahlen</h2>
     <div class="card"><dl class="kv"><dt>Rechnungen</dt><dd>${yb.length}</dd><dt>Summe der Rechnungen</dt><dd>${eur(a.sum)}</dd><dt>Erstattet</dt><dd>${eur(a.refunded)}</dd><dt>Erstattung offen</dt><dd>${eur(a.openRefund)}</dd><dt>Selbst getragen</dt><dd>${eur(a.sum-a.refunded)}</dd></dl></div>`; }
 
@@ -722,7 +829,9 @@ function viewVorsorge(){ const Y=S.ui.year; const a=analyzeYear(Y); const st=S.s
 
 function upcomingDeadlines(days){ const today=todayISO(); return allDeadlines().filter(d=>!d.done&&d.date<=addDays(today,days)).sort((a,b)=>a.date.localeCompare(b.date)); }
 function allDeadlines(){ const list=[...S.deadlines]; const now=new Date().getFullYear();
-  for(let y=startYear()+1;y<=now+1;y++){ const id='decide-'+(y-1); if(!list.some(d=>d.id===id)) list.push({id,title:`Einreichen-Entscheidung für ${y-1} treffen`,date:`${y}-01-20`,note:'Im Belegbuch das Jahr prüfen: einreichen oder Bonus mitnehmen.',done:!!S.years[y-1]?.decided,auto:true}); }
+  for(let y=startYear()+1;y<=now+1;y++){
+    list.push({id:'decide-'+(y-1),title:`Einreichen-Entscheidung für ${y-1} treffen`,date:`${y}-01-20`,note:'Im Belegbuch das Jahr prüfen: einreichen oder Bonus mitnehmen.',done:!!S.years[y-1]?.decided,auto:true,year:y-1,key:'decided'});
+    if(y>=2028) list.push({id:'plancheck-'+y,title:`Sparplan ${y} prüfen`,date:`${y}-01-31`,note:'Neuen PKV-Beitrag, Gehalt und GKV-Werte eintragen, Rate anpassen.',done:!!S.years[y]?.planChecked,auto:true,year:y,key:'planChecked'}); }
   return list; }
 function viewMore(){ const st=S.settings; const today=todayISO();
   const dl=allDeadlines().sort((a,b)=>a.date.localeCompare(b.date)).map(d=>`<div class="step"><button class="check" aria-pressed="${!!d.done}" data-dl="${d.id}" aria-label="Erledigt">${d.done?'✓':''}</button><div style="min-width:0"><div style="font-weight:600${d.done?';text-decoration:line-through;color:var(--muted)':''}">${esc(d.title)}</div><div class="small muted">${fmtDate(d.date)}${d.note?' · '+esc(d.note):''}</div></div>${!d.done&&d.date<today?'<span class="pill bad">vorbei</span>':'<button class="btn sm ghost" data-dlcal="'+d.id+'">Kalender</button>'}</div>`).join('');
@@ -740,7 +849,8 @@ function viewMore(){ const st=S.settings; const today=todayISO();
       <div class="field"><label for="s-email">Google-Konto (E-Mail, optional)</label><input id="s-email" data-s="email" value="${esc(st.email)}" inputmode="email" autocomplete="email"></div>
       <div class="field"><label for="s-folderName">Ordnername in Drive (beim ersten Verbinden)</label><input id="s-folderName" data-s="folderName" value="${esc(st.folderName)}"></div>
       <div class="field"><label>Weiterleitungs-URL für die Google Cloud Console</label><code class="sel">${esc(redirectUri())}</code></div>`;
-  return `<h2>Fristen</h2><div class="steps">${dl}</div>
+  return `<div class="list"><button class="item" data-tab-go="vorsorge"><span class="ico green">${ICON.heart}</span><span class="main"><span class="t">Vorsorge-Planer</span><span class="sub">Check-up, Hautkrebs-Screening, Zahnreinigung, Impfungen</span></span><span class="muted">›</span></button></div>
+    <h2>Fristen</h2><div class="steps">${dl}</div>
     <details class="card" data-open="dl" ${S.ui.open.has('dl')?'open':''}><summary>Eigene Frist hinzufügen</summary><div style="display:flex;flex-direction:column;gap:10px"><div class="field"><label for="dl-title">Was</label><input id="dl-title" placeholder="z. B. Widerspruch BE-SI-Dynamik"></div><div class="field"><label for="dl-date">Bis wann</label><input id="dl-date" type="date"></div><button class="btn" data-action="add-dl">Frist speichern</button></div></details>
     <div class="row-btns"><button class="btn" data-action="dl-cal-all">Alle offenen Fristen in den Kalender</button></div>
     <h2>Jahre, Bonus & Steuer</h2>${yearRows}
@@ -764,11 +874,11 @@ function sField(k,label,type='text'){ const v=S.settings[k]; return `<div class=
 
 function render(){ const Y=S.ui.year; const n=S.settings.name;
   const H={home:[n?`Hallo, ${n}`:'Hallo','Dein digitales Rechnungsarchiv','Offene Rechnungen, Fristen und Erstattungen auf einen Blick'],
-    bills:['Rechnungen','',`Alle Belege aus ${Y}`], vorsorge:['Vorsorge','','Bis '+eur0(S.settings.vorsorgeBudget)+' im Jahr ohne Bonusverlust'], more:['Mehr','','Fristen, Google Drive und Tarif']}[S.ui.tab];
+    bills:['Rechnungen','',`Alle Belege aus ${Y}`], vorsorge:['Vorsorge','','Bis '+eur0(S.settings.vorsorgeBudget)+' im Jahr ohne Bonusverlust'], sparplan:['Sparplan','','Was du gegenüber der GKV sparst und ins Depot legst'], more:['Mehr','','Fristen, Google Drive und Tarif']}[S.ui.tab];
   $('#hTitle').textContent=H[0]; $('#hLead').textContent=H[1]; $('#hLead').hidden=!H[1]; $('#hSub').textContent=H[2];
   $('#yLabel').textContent=Y; $('#yPrev').disabled=Y<=startYear(); $('#yNext').disabled=Y>=Math.max(new Date().getFullYear(),startYear())+1;
   document.querySelectorAll('.tab[data-tab]').forEach(t=>{ if(t.dataset.tab!=='scan') t.setAttribute('aria-current',t.dataset.tab===S.ui.tab?'page':'false'); });
-  const views={home:viewHome,bills:viewBills,vorsorge:viewVorsorge,more:viewMore};
+  const views={home:viewHome,bills:viewBills,vorsorge:viewVorsorge,sparplan:viewSparplan,more:viewMore};
   $('#view').innerHTML=views[S.ui.tab]();
   renderSyncChip(); }
 
@@ -891,10 +1001,13 @@ function bind(){
     if(d.vdone){ const v=S.vorsorge.find(x=>x.id===d.vdone); const body=openSheet(v.name,`<div class="field"><label for="vd">Erledigt am</label><input id="vd" type="date" value="${todayISO()}"></div><button class="btn primary" id="vsave">Speichern</button>`);
       body.querySelector('#vsave').onclick=async()=>{ v.last=$('#vd').value; await saveMeta('vorsorge'); markDirty(); closeSheet(); render(); }; return; }
     if(d.vcal){ const v=S.vorsorge.find(x=>x.id===d.vcal); const date=v.last?addMonths(v.last,v.months):addDays(todayISO(),14); download(`vorsorge-${v.id}.ics`,icsFile([{id:v.id,title:v.name+' – Termin vereinbaren',date,note:'Kosten zählen zum Vorsorge-Budget (750 €/Jahr, ohne Bonusverlust).'}]),'text/calendar'); return; }
-    if(d.dl){ const dd=allDeadlines().find(x=>x.id===d.dl); if(dd.auto){ const y=+dd.id.slice(7); S.years[y]={...(S.years[y]||{}),decided:!dd.done}; await saveMeta('years'); } else { const x=S.deadlines.find(q=>q.id===d.dl); x.done=!x.done; await saveMeta('deadlines'); } markDirty(); render(); return; }
+    if(d.dl){ const dd=allDeadlines().find(x=>x.id===d.dl); if(dd.auto){ S.years[dd.year]={...(S.years[dd.year]||{}),[dd.key]:!dd.done}; await saveMeta('years'); } else { const x=S.deadlines.find(q=>q.id===d.dl); x.done=!x.done; await saveMeta('deadlines'); } markDirty(); render(); return; }
     if(d.dlcal){ const dd=allDeadlines().find(x=>x.id===d.dlcal); download(`frist-${dd.id}.ics`,icsFile([dd]),'text/calendar'); return; }
     switch(d.action){
       case 'clear-demo': return clearDemo();
+      case 'plan-apply': { const r=planCalc().rate; setPlanRate(r); await saveMeta('plan'); markDirty(); render(); return toast(`Sparplan auf ${eur0(r)} gesetzt. Ändere ihn jetzt auch bei Trade Republic.`); }
+      case 'plan-hist': { const d=$('#ph-date').value||todayISO(); const k=S.plan.pkv; const total=Math.round((k.kv+k.besi+k.ktg+k.ekh+k.pvn+k.zuschlag)*100)/100;
+        S.plan.history=S.plan.history.filter(h=>h.date!==d); S.plan.history.push({date:d,total,note:'Beitragsanpassung'}); await saveMeta('plan'); markDirty(); render(); return toast(`Beitrag ${eur(total)} ab ${fmtDate(d)} gespeichert`); }
       case 'sync': return syncNow({interactive:true});
       case 'restore-drive': return restoreFromDrive();
       case 'export-json': return download(`pkv-backup-${todayISO()}.json`,JSON.stringify(backupData(),null,1),'application/json');
@@ -914,6 +1027,12 @@ function bind(){
       else if(['sb','priorFreeYears','breEstimate','taxRate','basisShare'].includes(k)) v=parseDe(v)??0;
       else if(typeof v==='string') v=v.trim();
       S.settings[k]=v; await saveMeta('settings'); if(k!=='clientId'&&k!=='email') markDirty(); render(); toast('Gespeichert'); }
+    if(t.dataset.p){ const path=t.dataset.p.split('.'); const v=parseDe(t.value); let o=S.plan; for(const k of path.slice(0,-1)) o=o[k]; o[path[path.length-1]]=v;
+      if(t.dataset.p==='current'&&v!=null) setPlanRate(v);
+      if(t.dataset.p==='depotIst'&&!S.plan.depotDate) S.plan.depotDate=todayISO();
+      await saveMeta('plan'); markDirty(); render(); return; }
+    if(t.dataset.pc){ const path=t.dataset.pc.split('.'); let o=S.plan; for(const k of path.slice(0,-1)) o=o[k]; o[path[path.length-1]]=t.checked; await saveMeta('plan'); markDirty(); render(); return; }
+    if(t.dataset.pd){ S.plan[t.dataset.pd]=t.value; await saveMeta('plan'); markDirty(); render(); return; }
     if(t.dataset.year){ const y=t.dataset.year; S.years[y]={...(S.years[y]||{}),[t.dataset.k]:parseDe(t.value)}; await saveMeta('years'); markDirty(); render(); } });
 }
 
