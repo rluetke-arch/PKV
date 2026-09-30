@@ -250,7 +250,7 @@ details.rrow[open]>summary{background:var(--surface-2)} details.rrow .item{paddi
 
 <script>
 'use strict';
-const APP_VERSION='2.0.1';
+const APP_VERSION='2.0.2';
 const CLIENT_ID='224489061373-shav7m8rhadfbt94lurtvo4nji5mhe8f.apps.googleusercontent.com';
 const API_KEY='AIzaSyAzKcyKQ0mJZN1guXSbB_wnmMk23N_fHbI';        // Google Picker (nur für Anika nötig)
 const PROJECT_NUMBER='224489061373'; // Google-Cloud-Projektnummer
@@ -604,6 +604,9 @@ function viewHome(){ const M=S.ui.month; const n=S.data.config.names; const toda
   const grpHtml=r.has?`<section class="todo"><div class="top"><b>Plan und Ist</b><span class="small muted">${MONTHS[+M.slice(5)-1]}</span></div>
     ${groups.map(([l,x])=>{ const over=x.ist>x.plan+0.5; return `<button class="trow cat" data-tab-go="tx"><span class="cmain"><span class="crow"><span>${l}</span><b class="num ${over?'neg':''}">${eur0(x.ist)}<span class="muted"> / ${eur0(x.plan)}</span></b></span><span class="meter ${over?'warn':''}"><i style="width:${x.plan?Math.min(x.ist/x.plan,1)*100:(x.ist?100:0)}%"></i></span></span></button>`; }).join('')}
     ${looseSum?`<button class="trow cat" data-tab-go="tx"><span class="cmain"><span class="crow"><span>Nicht im Plan</span><b class="num neg">${eur0(looseSum)}</b></span></span></button>`:''}</section>`:'';
+  const catRows=r.has?[...r.var].filter(x=>x.plan||x.ist).sort((a,b)=>b.plan-a.plan||b.ist-a.ist):[];
+  const catHtml=catRows.length?`<section class="todo"><div class="top"><b>Kategorien</b><span class="small muted">${MONTHS[+M.slice(5)-1]}</span></div>${catRows.map(x=>{ const over=x.ist>x.plan+0.5; const p=x.plan?Math.min(x.ist/x.plan,1):(x.ist?1:0);
+    return `<button class="trow cat" data-tab-go="tx"><span class="glyph ${catColor(x.id)}">${esc(initials(x.name))}</span><span class="cmain"><span class="crow"><span>${esc(x.name)}</span><b class="num ${over?'neg':''}">${eur0(x.ist)}<span class="muted"> / ${eur0(x.plan)}</span></b></span><span class="meter ${over?'warn':''}"><i style="width:${p*100}%"></i></span></span></button>`; }).join('')}</section>`:'';
   const top5=r.has?[...r.fix,...r.var,...r.rueck].map(x=>({...x,d:x.ist-x.plan})).filter(x=>Math.abs(x.d)>=10).sort((a,b)=>Math.abs(b.d)-Math.abs(a.d)).slice(0,6):[];
   const devHtml=top5.length?`<h2>Größte Abweichungen</h2><div class="list">${top5.map(x=>`<button class="item" data-tab-go="tx"><span class="glyph ${x.d>0?'red':'green'}">${x.d>0?'+':'−'}</span><span class="main"><span class="t">${esc(x.name)}</span><span class="sub">Ist ${eur0(x.ist)} · Plan ${eur0(x.plan)}</span></span><span class="a num ${x.d>0?'neg':'pos'}">${x.d>0?'+':'−'}${eur0(Math.abs(x.d))}</span></button>`).join('')}</div>`:'';
   const pay=r.has?`<section class="card" style="display:flex;flex-direction:column;gap:10px"><b>Eingezahlt in ${MONTHS[+M.slice(5)-1]}</b>
@@ -620,7 +623,7 @@ function viewHome(){ const M=S.ui.month; const n=S.data.config.names; const toda
       <div class="row-btns"><button class="btn" data-action="adopt-budgets">Budgets an den Durchschnitt anpassen</button></div></section>`:'';
   const tile=(ic,col,title,pairs,attr='')=>`<${attr?'button':'div'} class="tile" ${attr}><div class="th"><span class="ico ${col}">${ic}</span><span>${title}</span></div><dl>${pairs.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl></${attr?'button':'div'}>`;
   const tiles=`<div class="tiles">${tile(ICON.bank,'blue','Konto',[['Stand',last?eur0(last.balance):'–'],['vom',last?fmtDate(last.date):'–']])}${kr?tile(ICON.house,'violet','Kredit',[['Restschuld',eur0(kr.balance)],['Getilgt',Math.round(kr.progress*100)+' %']],'data-go="kredit"'):''}</div>`;
-  return top+hero+grpHtml+recHtml+pay+devHtml+tiles; }
+  return top+hero+grpHtml+catHtml+recHtml+pay+devHtml+tiles; }
 
 function txRow(t){ const isIn=t.type==='in', isTr=t.type==='transfer'; const sign=isIn||(isTr&&t.dir==='in')?'+':'−';
   const label=isTr?`Umbuchung ${t.dir==='in'?'von':'an'} ${who(t.who)}`:isIn?(t.cat?catName(t.cat):'Einnahme'):catName(t.cat);
