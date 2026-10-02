@@ -280,7 +280,7 @@ details.rrow[open]>summary{background:var(--surface-2)} details.rrow .item{paddi
 
 <script>
 'use strict';
-const APP_VERSION='2.1.0';
+const APP_VERSION='2.1.1';
 const CLIENT_ID='224489061373-shav7m8rhadfbt94lurtvo4nji5mhe8f.apps.googleusercontent.com';
 const API_KEY='AIzaSyAzKcyKQ0mJZN1guXSbB_wnmMk23N_fHbI';        // Google Picker (nur für Anika nötig)
 const PROJECT_NUMBER='224489061373'; // Google-Cloud-Projektnummer
@@ -381,7 +381,7 @@ function importedMonths(){ return [...new Set(live('tx').filter(t=>t.src==='ing'
 function recon(M){ const items=live('items'); const byId=Object.fromEntries(items.map(i=>[i.id,i]));
   const txs=live('tx').filter(t=>ym(t.date)===M); const outAll=txs.filter(t=>t.type==='out'); const once=outAll.filter(t=>t.once); const out=outAll.filter(t=>!t.once); const inn=txs.filter(t=>t.type==='in'), tr=txs.filter(t=>t.type==='transfer');
   const sumT=a=>a.reduce((s,t)=>s+t.amount,0);
-  const person=k=>{ const i=sumT(tr.filter(t=>t.who===k&&t.dir==='in')), o=sumT(tr.filter(t=>t.who===k&&t.dir!=='in')); return {in:i,out:o,net:i-o}; };
+  const person=k=>{ const i=sumT(tr.filter(t=>t.who===k&&t.dir==='in')), o=sumT(tr.filter(t=>t.who===k&&t.dir!=='in')); const ins=tr.filter(t=>t.who===k&&t.dir==='in').sort((a,b)=>a.date.localeCompare(b.date)); return {in:i,out:o,net:i-o,first:ins.length?ins[0].amount:0}; };
   const act=items.filter(i=>active(i,M));
   const row=(it,plan,list)=>({id:it.id,name:it.name,plan,ist:sumT(list),txs:list});
   const fix=act.filter(i=>i.kind==='fix'&&i.payer==='g'&&i.every===1).map(i=>row(i,i.amount,out.filter(t=>t.cat===i.id)));
@@ -709,11 +709,11 @@ function viewHome(){ const M=S.ui.month; const n=S.data.config.names; const toda
   const top5=r.has?[...r.fix,...r.var,...r.rueck].map(x=>({...x,d:x.ist-x.plan})).filter(x=>Math.abs(x.d)>=10).sort((a,b)=>Math.abs(b.d)-Math.abs(a.d)).slice(0,6):[];
   const devHtml=top5.length?`<h2>Größte Abweichungen</h2><div class="list">${top5.map(x=>`<button class="item" data-tab-go="tx"><span class="glyph ${x.d>0?'red':'green'}">${x.d>0?'+':'−'}</span><span class="main"><span class="t">${esc(x.name)}</span><span class="sub">Ist ${eur0(x.ist)} · Plan ${eur0(x.plan)}</span></span><span class="a num ${x.d>0?'neg':'pos'}">${x.d>0?'+':'−'}${eur0(Math.abs(x.d))}</span></button>`).join('')}</div>`:'';
   const pay=r.has?`<section class="card" style="display:flex;flex-direction:column;gap:10px"><b>Eingezahlt in ${MONTHS[+M.slice(5)-1]}</b>
-      <table class="tbl"><thead><tr><th></th><th>Plan</th><th>Ist (netto)</th></tr></thead><tbody>
-      <tr><td>${esc(n.a)}</td><td>${eur0(month(M).trA.ing+month(M).trA.rueck)}</td><td class="${r.pA.net<month(M).trA.ing+month(M).trA.rueck-1?'neg':''}">${eur0(r.pA.net)}</td></tr>
-      <tr><td>${esc(n.b)}</td><td>${eur0(month(M).trB.ing+month(M).trB.rueck)}</td><td class="${r.pB.net<month(M).trB.ing+month(M).trB.rueck-1?'neg':''}">${eur0(r.pB.net)}</td></tr>
+      <table class="tbl"><thead><tr><th></th><th>Plan</th><th>Ist</th></tr></thead><tbody>
+      <tr><td>${esc(n.a)}</td><td>${eur0(month(M).trA.ing+month(M).trA.rueck)}</td><td class="${r.pA.first<month(M).trA.ing+month(M).trA.rueck-1?'neg':''}">${eur0(r.pA.first)}</td></tr>
+      <tr><td>${esc(n.b)}</td><td>${eur0(month(M).trB.ing+month(M).trB.rueck)}</td><td class="${r.pB.first<month(M).trB.ing+month(M).trB.rueck-1?'neg':''}">${eur0(r.pB.first)}</td></tr>
       <tr><td>Einnahmen (z. B. Kindergeld)</td><td>${eur0(r.G.inc.plan)}</td><td>${eur0(r.istIn)}</td></tr></tbody></table>
-      <p class="small muted" style="margin:0">Netto heißt: Überweisungen aufs Gemeinschaftskonto minus das, was wieder auf eure eigenen Konten zurückging.</p></section>`:'';
+      <p class="small muted" style="margin:0">Gezählt wird nur die erste Einzahlung des Monats. Weitere Umbuchungen zwischen euren Konten bleiben hier unberücksichtigt.</p></section>`:'';
   const recHtml=rec?`<section class="card" style="display:flex;flex-direction:column;gap:12px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>Empfehlung für eure Überweisungen</b><span class="pill mut">Ø ${rec.months.length} ${rec.months.length===1?'Monat':'Monate'}</span></div>
       <table class="tbl"><thead><tr><th></th><th>bisher Plan</th><th>empfohlen</th></tr></thead><tbody>
       <tr><td>${esc(n.a)}</td><td>${eur0(rec.planA)}</td><td><b>${eur0(Math.ceil(rec.recA/5)*5)}</b> <span class="small ${rec.recA>rec.planA?'neg':'pos'}">${rec.recA>=rec.planA?'+':'−'}${eur0(Math.abs(rec.recA-rec.planA))}</span></td></tr>
