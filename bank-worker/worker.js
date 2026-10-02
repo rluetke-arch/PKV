@@ -36,6 +36,8 @@ export default {
     if (reqOrigin && reqOrigin !== origin) return json({ error: 'Herkunft nicht erlaubt' }, 403);
 
     try {
+      const u0 = new URL(req.url);
+      if (u0.pathname.replace(/\/+$/, '') === '/callback' && req.method === 'GET') return callback(u0, env);
       const user = await checkGoogle(req, env);
       if (!user) return json({ error: 'Nicht berechtigt. Bitte in der App mit Google anmelden.' }, 401);
       const url = new URL(req.url);
@@ -45,20 +47,32 @@ export default {
 
       if (path === '/auth' && req.method === 'POST') {
         const body = await req.json().catch(() => ({}));
-        const redirect = String(body.redirect_url || '');
-        if (!origin || !redirect.startsWith(origin + '/')) return json({ error: 'Rücksprung-Adresse nicht erlaubt' }, 400);
+        // Rücksprung immer zum Worker: Auf dem iPhone öffnet die ING-App den Rücksprung oft in Safari statt in der App.
+        const redirect = url.origin + '/callback';
+        const st = String(body.state || '');
+        if (!UUID.test(st)) return json({ error: 'Ungültiger Status' }, 400);
         const aspsp = await findBank(env);
         const maxSec = Math.min(aspsp.maximum_consent_validity || 90 * 86400, 180 * 86400);
         const validUntil = new Date(Date.now() + (maxSec - 3600) * 1000).toISOString();
         const r = await eb(env, '/auth', { method: 'POST', body: {
           access: { valid_until: validUntil },
           aspsp: { name: aspsp.name, country: aspsp.country },
-          state: UUID.test(String(body.state || '')) ? body.state : crypto.randomUUID(),
+          state: st,
           redirect_url: redirect,
           psu_type: 'personal',
           language: 'de',
         } });
         return json({ url: r.url, bank: aspsp.name, valid_until: validUntil });
+      }
+
+      if (path === '/result' && req.method === 'GET') {
+        const st = url.searchParams.get('state') || '';
+        if (!UUID.test(st)) return json({ error: 'Ungültiger Status' }, 400);
+        const cache = caches.default; const key = new Request('https://eb-result.internal/' + st);
+        const hit = await cache.match(key);
+        if (!hit) return json({ pending: true });
+        const data = await hit.json(); await cache.delete(key);
+        return json(data);
       }
 
       if (path === '/session' && req.method === 'POST') {
@@ -199,4 +213,33 @@ function der(tag, content) { return [tag, ...derLen(content.length), ...content]
 function pkcs1to8(pkcs1) {
   const algo = der(0x30, [0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01, 0x05, 0x00]);
   return new Uint8Array(der(0x30, [0x02, 0x01, 0x00, ...algo, ...der(0x04, [...pkcs1])]));
+}
+
+/* ---------- Rücksprung von der Bank ---------- */
+async function callback(url, env) {
+  const st = url.searchParams.get('state') || '';
+  const code = url.searchParams.get('code') || '';
+  const err = url.searchParams.get('error');
+  let ok = false, msg = '';
+  if (UUID.test(st)) {
+    let data;
+    if (code && !err) {
+      try {
+        const s = await eb(env, '/sessions', { method: 'POST', body: { code } });
+        data = { session_id: s.session_id, valid_until: s.access?.valid_until || null, bank: s.aspsp?.name || null,
+          accounts: (s.accounts || []).map(a => ({ uid: a.uid, iban: a.account_id?.iban || null, name: a.name || a.product || null, product: a.product || null, currency: a.currency || null })) };
+        ok = true;
+      } catch (e) { data = { error: e.message }; msg = e.message; }
+    } else { data = { error: url.searchParams.get('error_description') || err || 'abgebrochen' }; msg = data.error; }
+    await caches.default.put(new Request('https://eb-result.internal/' + st), new Response(JSON.stringify(data), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=900' } }));
+  } else msg = 'Ungültiger Aufruf';
+  const app = (env.ALLOWED_ORIGIN || '') + '/PKV/haushalt/';
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Haushaltsbuch</title>
+<style>:root{color-scheme:light dark}body{font:17px/1.5 -apple-system,system-ui,sans-serif;max-width:520px;margin:0 auto;padding:40px 20px;background:Canvas;color:CanvasText}h1{font-size:1.4rem}a.b{display:inline-block;margin-top:16px;padding:12px 18px;border-radius:12px;background:#3b82f6;color:#fff;text-decoration:none;font-weight:600}p.s{opacity:.7;font-size:15px}</style></head><body>
+<h1>${ok ? 'ING ist verbunden ✓' : 'Verbindung nicht abgeschlossen'}</h1>
+<p>${ok ? 'Wechsle jetzt zurück in die Haushaltsbuch-App auf deinem Home-Bildschirm. Sie übernimmt die Verbindung automatisch.' : esc(msg || 'Bitte in der App noch einmal „Mit ING verbinden“ tippen.')}</p>
+<a class="b" href="${esc(app)}">Zurück zum Haushaltsbuch</a>
+<p class="s">Falls sich dabei Safari statt der App öffnet: Safari schließen und die App über das Symbol auf dem Home-Bildschirm öffnen.</p></body></html>`;
+  return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' } });
 }

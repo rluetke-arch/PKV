@@ -280,7 +280,7 @@ details.rrow[open]>summary{background:var(--surface-2)} details.rrow .item{paddi
 
 <script>
 'use strict';
-const APP_VERSION='2.4.2';
+const APP_VERSION='2.5.0';
 const CLIENT_ID='224489061373-shav7m8rhadfbt94lurtvo4nji5mhe8f.apps.googleusercontent.com';
 const API_KEY='AIzaSyAzKcyKQ0mJZN1guXSbB_wnmMk23N_fHbI';        // Google Picker (nur für Anika nötig)
 const PROJECT_NUMBER='224489061373'; // Google-Cloud-Projektnummer
@@ -635,24 +635,26 @@ function processParsed(parsed,name,fromBank){
 const bankCfg=()=>S.data.config.bank||{};
 async function bfetch(path,opts={}){ const w=String(bankCfg().worker||'').trim().replace(/\/+$/,''); if(!/^https:\/\//.test(w)) throw new Error('Bitte zuerst die Adresse des Bank-Dienstes eintragen (Mehr → ING-Abruf).');
   if(!tokenValid()) throw new AuthErr('Bitte zuerst unter „Mehr → Google Drive“ mit Google verbinden.');
-  let r; try{ r=await fetch(w+path,{...opts,headers:{'Content-Type':'application/json',...(opts.headers||{}),Authorization:'Bearer '+token().access_token}}); }catch(e){ throw new Error('Bank-Dienst nicht erreichbar. Stimmt die Adresse?'); }
+  let r; try{ r=await fetch(w+path,{...opts,headers:{'Content-Type':'application/json',...(opts.headers||{}),Authorization:'Bearer '+token().access_token}}); }catch(e){ throw new Error(`Bank-Dienst nicht erreichbar (${e.message||e}). Adresse: ${w}`); }
   let j=null; try{ j=await r.json(); }catch(e){}
   if(r.status===401) throw new AuthErr(j?.error||'Nicht berechtigt. Bitte neu mit Google verbinden.');
   if(!r.ok) throw new Error(j?.error||('Bank-Dienst: Fehler '+r.status)); return j; }
-async function bankConnect(){ try{ const st=crypto.randomUUID(); lsSet('hh.ebState',st); const j=await bfetch('/auth',{method:'POST',body:JSON.stringify({redirect_url:redirectUri(),state:st})}); location.href=j.url; }
+async function bankConnect(){ try{ const st=crypto.randomUUID(); const j=await bfetch('/auth',{method:'POST',body:JSON.stringify({state:st})}); lsSet('hh.ebState',st); lsSet('hh.ebSince',String(Date.now())); location.href=j.url; }
   catch(e){ if(e instanceof AuthErr){ if(await confirmBox('Der Bank-Dienst erkennt deine Google-Anmeldung nicht. Jetzt neu bei Google anmelden? Danach bitte noch einmal „Mit ING verbinden“ tippen.','Neu anmelden')){ lsSet('hh.token',null); startAuth(false); } return; } toast(e.message); } }
-function captureBankRedirect(){ const p=new URLSearchParams(location.search); if(!p.has('code')&&!p.has('error')) return;
-  if(p.get('state')&&p.get('state')===lsGet('hh.ebState')) lsSet('hh.ebPending',JSON.stringify({code:p.get('code'),error:p.get('error'),desc:p.get('error_description')}));
-  history.replaceState(null,'',location.pathname+location.hash); }
-async function finishBank(){ const raw=lsGet('hh.ebPending'); if(!raw||!tokenValid()) return; let p=null; try{ p=JSON.parse(raw); }catch(e){} lsSet('hh.ebPending',null); lsSet('hh.ebState',null);
-  if(!p||p.error||!p.code) return toast('ING-Verbindung abgebrochen'+(p?.desc?': '+p.desc:'.'));
-  try{ const s=await bfetch('/session',{method:'POST',body:JSON.stringify({code:p.code})}); const accs=s.accounts||[];
-    const pick=a=>{ setConfig(c=>{ c.bank={...(c.bank||{}),session:s.session_id,validUntil:s.valid_until,account:a.uid,iban:a.iban,accName:a.name,connectedBy:meKey(),connectedAt:todayISO()}; }); toast('ING ist verbunden. Ihr könnt die Umsätze jetzt abrufen.'); };
-    if(!accs.length) return toast('Die ING hat kein Konto freigegeben.');
-    if(accs.length===1) return pick(accs[0]);
-    const body=openSheet('Welches Konto abrufen?',`<p class="small muted" style="margin:0">Wählt euer Gemeinschaftskonto.</p><div class="list">${accs.map((a,i)=>`<button class="item" data-pick="${i}"><span class="main"><span class="t">${esc(a.name||a.product||'Konto')}</span><span class="sub">${esc(a.iban||'')}</span></span></button>`).join('')}</div>`);
-    body.addEventListener('click',e=>{ const b=e.target.closest('[data-pick]'); if(!b) return; closeSheet(); pick(accs[+b.dataset.pick]); }); }
-  catch(e){ toast('ING-Verbindung: '+e.message); } }
+function applyBankSession(s){ const accs=s.accounts||[];
+  const pick=a=>{ setConfig(c=>{ c.bank={...(c.bank||{}),session:s.session_id,validUntil:s.valid_until,account:a.uid,iban:a.iban,accName:a.name,connectedBy:meKey(),connectedAt:todayISO()}; }); toast('ING ist verbunden. Ihr könnt die Umsätze jetzt abrufen.'); };
+  if(!accs.length) return toast('Die ING hat kein Konto freigegeben.');
+  if(accs.length===1) return pick(accs[0]);
+  const body=openSheet('Welches Konto abrufen?',`<p class="small muted" style="margin:0">Wählt euer Gemeinschaftskonto.</p><div class="list">${accs.map((a,i)=>`<button class="item" data-pick="${i}"><span class="main"><span class="t">${esc(a.name||a.product||'Konto')}</span><span class="sub">${esc(a.iban||'')}</span></span></button>`).join('')}</div>`);
+  body.addEventListener('click',e=>{ const b=e.target.closest('[data-pick]'); if(!b) return; closeSheet(); pick(accs[+b.dataset.pick]); }); }
+let bankPolling=false;
+async function pollBank(){ const st=lsGet('hh.ebState'); if(!st||bankPolling||!tokenValid()) return;
+  if(Date.now()-(+lsGet('hh.ebSince')||0)>20*60000){ lsSet('hh.ebState',null); return; }
+  bankPolling=true;
+  try{ for(let k=0;k<12;k++){ const r=await bfetch('/result?state='+encodeURIComponent(st));
+      if(!r.pending){ lsSet('hh.ebState',null); if(r.error) return toast('ING-Verbindung: '+r.error); return applyBankSession(r); }
+      await new Promise(res=>setTimeout(res,2500)); } }
+  catch(e){ toast(e.message); } finally{ bankPolling=false; } }
 function ebRow(x){ const amt=parseFloat(x.transaction_amount?.amount); if(!isFinite(amt)) return null; const credit=x.credit_debit_indicator==='CRDT'; const a=credit?Math.abs(amt):-Math.abs(amt);
   const party=(credit?x.debtor?.name:x.creditor?.name)||'';
   const desc=String(x.bank_transaction_code?.description||''); const tm=desc.match(IMPORT_TYPES); const typ=tm?tm[1]:(credit?'Gutschrift':'Lastschrift');
@@ -1003,12 +1005,11 @@ function bind(){ $('#mPrev').onclick=()=>{ S.ui.month=addM(S.ui.month,-1); rende
       setConfig(c=>{ let o=c; for(const k of path.slice(0,-1)){ if(o[k]==null) o[k]={}; o=o[k]; } o[path[path.length-1]]=val; }); toast('Gespeichert'); return; }
     if(t.dataset.l){ S.local[t.dataset.l]=t.value.trim(); persist(); toast('Gespeichert'); } });
   view.addEventListener('toggle',e=>{ const k=e.target.dataset?.open; if(k){ e.target.open?S.ui.open.add(k):S.ui.open.delete(k); } },true);
-  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') hiddenAt=Date.now(); else { if(hiddenAt&&Date.now()-hiddenAt>60000) lockNow(); syncNow({}); } });
+  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') hiddenAt=Date.now(); else { if(hiddenAt&&Date.now()-hiddenAt>60000) lockNow(); syncNow({}); pollBank(); } });
   setInterval(()=>{ if(document.visibilityState==='visible'&&tokenValid()) syncNow({}); },90000);
   addEventListener('online',()=>syncNow({})); }
 
 (async function boot(){
-  if(!IN_PREVIEW) captureBankRedirect();
   const auth=IN_PREVIEW?null:handleAuthRedirect();
   await DB.open(); const d=await DB.get('data'), l=await DB.get('local');
   if(d) S.data={...EMPTY(),...d}; else if(SEED){ S.data={...EMPTY(),...JSON.parse(JSON.stringify(SEED))}; }
@@ -1022,7 +1023,7 @@ function bind(){ $('#mPrev').onclick=()=>{ S.ui.month=addM(S.ui.month,-1); rende
   if(!IN_PREVIEW&&'serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
   const last=+(lsGet('hh.silentAt')||0);
   if(!IN_PREVIEW&&S.local.me&&!tokenValid()&&navigator.onLine&&!auth&&(S.local.fileId||S.local.role==='owner')&&Date.now()-last>10*60000){ startAuth(true); return; }
-  if(lsGet('hh.ebPending')){ if(tokenValid()) finishBank(); else toast('Bitte mit Google verbinden, dann wird die ING-Verbindung abgeschlossen.'); }
+  if(lsGet('hh.ebState')) pollBank();
   syncNow({});
 })();
 </script>
