@@ -280,7 +280,7 @@ details.rrow[open]>summary{background:var(--surface-2)} details.rrow .item{paddi
 
 <script>
 'use strict';
-const APP_VERSION='2.1.1';
+const APP_VERSION='2.2.0';
 const CLIENT_ID='224489061373-shav7m8rhadfbt94lurtvo4nji5mhe8f.apps.googleusercontent.com';
 const API_KEY='AIzaSyAzKcyKQ0mJZN1guXSbB_wnmMk23N_fHbI';        // Google Picker (nur für Anika nötig)
 const PROJECT_NUMBER='224489061373'; // Google-Cloud-Projektnummer
@@ -774,11 +774,14 @@ function viewPlan(){ const M=S.ui.month; const m=month(M); const rec=recommend(M
     return `<h2 style="display:flex;justify-content:space-between;align-items:baseline"><span>${title}</span><span class="small muted num">${eur(tot)} / Monat</span></h2>${hint?`<p class="small muted" style="margin:-6px 0 0">${hint}</p>`:''}
       <div class="list">${act.map(itemRow).join('')}${inactive.length?`<details class="inact"><summary>${inactive.length} nicht aktiv in ${MONTHS[+M.slice(5)-1]}</summary>${inactive.map(itemRow).join('')}</details>`:''}<button class="item addrow" data-newitem="${kind}|${payer}"><span class="main"><span class="t">+ Posten hinzufügen</span></span></button></div>`; };
   const pc=Math.round(m.shareA*100);
+  const tot=m.trA.ing+m.trA.rueck+m.trB.ing+m.trB.rueck;
   return `<section class="hero"><div class="lbl">Plan für ${mName(M)}</div>
-      <div class="cmp"><div class="row"><span>Einnahmen</span><b class="num">${eur0(m.income)}</b></div><div class="row"><span>Fixkosten inkl. Rücklage</span><b class="num">−${eur0(m.costs)}</b></div>
-      <div class="row"><span>Haushaltsgeld</span><b class="num">−${eur0(m.budget)}</b></div><div class="row"><span>Sparen</span><b class="num">−${eur0(m.saves)}</b></div>
-      <div class="row" style="font-size:17px"><span><b>Überschuss</b></span><b class="num">${eur0(m.surplus)}</b></div></div>
-      <p class="note">Sparquote ${Math.round(m.savingsRate*100)} % (Sparen plus Überschuss)</p></section>
+      <div class="stats" style="grid-template-columns:1fr 1fr"><div><b class="${m.freeA<0?'neg':''}">${eur0(m.freeA)}</b><span>${esc(n.a)} frei verfügbar</span></div><div><b class="${m.freeB<0?'neg':''}">${eur0(m.freeB)}</b><span>${esc(n.b)} frei verfügbar</span></div></div>
+      <div class="cmp"><div class="row"><span>Fixkosten inkl. Rücklage</span><b class="num">${eur0(m.fixG+m.rueck)}</b></div>
+      <div class="row"><span>Haushaltsgeld</span><b class="num">${eur0(m.varG)}</b></div>
+      <div class="row"><span>Kindergeld</span><b class="num">−${eur0(m.incG)}</b></div>
+      <div class="row" style="font-size:17px"><span><b>Von euch beiden zu überweisen</b></span><b class="num">${eur0(tot)}</b></div></div>
+      <p class="note">Der Plan zeigt nur, was über das Gemeinschaftskonto läuft. Eigene Fixkosten und eigenes Sparen laufen nicht darüber. Sie sind unten bei der Aufteilung abgezogen, daraus ergibt sich, wie viel jeder frei hat.</p></section>
     <section class="card" style="display:flex;flex-direction:column;gap:12px"><b>Aufteilung ${S.data.config.split==='half'?'50 : 50':`nach Einkommen (${pc} : ${100-pc})`}</b>
       <table class="tbl"><thead><tr><th></th><th>${esc(n.a)}</th><th>${esc(n.b)}</th></tr></thead><tbody>
         <tr><td>Gemeinschaftskonto</td><td>${eur(m.trA.ing)}</td><td>${eur(m.trB.ing)}</td></tr>
