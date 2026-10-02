@@ -280,7 +280,7 @@ details.rrow[open]>summary{background:var(--surface-2)} details.rrow .item{paddi
 
 <script>
 'use strict';
-const APP_VERSION='2.4.0';
+const APP_VERSION='2.4.1';
 const CLIENT_ID='224489061373-shav7m8rhadfbt94lurtvo4nji5mhe8f.apps.googleusercontent.com';
 const API_KEY='AIzaSyAzKcyKQ0mJZN1guXSbB_wnmMk23N_fHbI';        // Google Picker (nur für Anika nötig)
 const PROJECT_NUMBER='224489061373'; // Google-Cloud-Projektnummer
@@ -640,7 +640,7 @@ async function bfetch(path,opts={}){ const w=String(bankCfg().worker||'').trim()
   if(r.status===401) throw new AuthErr(j?.error||'Nicht berechtigt. Bitte neu mit Google verbinden.');
   if(!r.ok) throw new Error(j?.error||('Bank-Dienst: Fehler '+r.status)); return j; }
 async function bankConnect(){ try{ const st=crypto.randomUUID(); lsSet('hh.ebState',st); const j=await bfetch('/auth',{method:'POST',body:JSON.stringify({redirect_url:redirectUri(),state:st})}); location.href=j.url; }
-  catch(e){ if(e instanceof AuthErr){ toast(e.message); return; } toast(e.message); } }
+  catch(e){ if(e instanceof AuthErr){ if(await confirmBox('Der Bank-Dienst erkennt deine Google-Anmeldung nicht. Jetzt neu bei Google anmelden? Danach bitte noch einmal „Mit ING verbinden“ tippen.','Neu anmelden')){ lsSet('hh.token',null); startAuth(false); } return; } toast(e.message); } }
 function captureBankRedirect(){ const p=new URLSearchParams(location.search); if(!p.has('code')&&!p.has('error')) return;
   if(p.get('state')&&p.get('state')===lsGet('hh.ebState')) lsSet('hh.ebPending',JSON.stringify({code:p.get('code'),error:p.get('error'),desc:p.get('error_description')}));
   history.replaceState(null,'',location.pathname+location.hash); }
@@ -896,7 +896,7 @@ function viewMore(){ const c=S.data.config; const n=c.names; const kr=kredit(); 
   const drive=IN_PREVIEW?'<div class="hint warn">Das ist die Vorschau. Google Drive und das Teilen mit Anika funktionieren in der installierten App.</div>':`
     <dl class="kv"><dt>Rolle</dt><dd>${L.role==='member'?'Mitglied':'Besitzer'}</dd><dt>Status</dt><dd>${esc({ok:'synchron',auth:'Anmeldung nötig',join:'nicht verbunden',offline:'offline',error:'Fehler',running:'läuft',idle:'–'}[SYNC.state]||SYNC.state)}</dd><dt>Letzte Synchronisierung</dt><dd>${L.lastSync?new Date(L.lastSync).toLocaleString('de-DE'):'–'}</dd></dl>
     ${SYNC.msg?`<div class="hint warn">${esc(SYNC.msg)}</div>`:''}
-    <div class="row-btns"><button class="btn primary" data-action="sync">${tokenValid()?'Jetzt synchronisieren':'Mit Google verbinden'}</button>${L.me==='b'||L.role==='member'?`<button class="btn" data-action="pick">Haushaltsbuch von ${esc(n.a)} öffnen</button>`:''}</div>
+    <div class="row-btns"><button class="btn primary" data-action="sync">${tokenValid()?'Jetzt synchronisieren':'Mit Google verbinden'}</button>${tokenValid()?'<button class="btn" data-action="relogin">Neu anmelden</button>':''}${L.me==='b'||L.role==='member'?`<button class="btn" data-action="pick">Haushaltsbuch von ${esc(n.a)} öffnen</button>`:''}</div>
     ${L.role==='member'?`<button class="btn ghost" data-action="own">Stattdessen gemeinsames Google-Konto nutzen</button><p class="small muted" style="margin:0">Wenn ihr beide in der App dasselbe Google-Konto verwendet (zum Beispiel ein eigenes Haushaltskonto), findet die App die Daten automatisch. Einladen und Dateiauswahl sind dann nicht nötig.</p>`:''}
     ${L.role!=='member'?`<div class="field"><label for="inv">${esc(n.b)} einladen (Gmail-Adresse)</label><input id="inv" inputmode="email" autocomplete="off" placeholder="name@gmail.com"></div><button class="btn" data-action="invite">Einladung senden</button>${(L.invited||[]).length?`<p class="small muted" style="margin:0">Eingeladen: ${L.invited.map(esc).join(', ')}</p>`:''}`:''}
     <details class="card" data-open="gkeys" ${S.ui.open.has('gkeys')?'open':''} style="padding:0;border:0;background:none"><summary class="small">Google-Einstellungen</summary><div style="display:flex;flex-direction:column;gap:10px">
@@ -977,6 +977,7 @@ function bind(){ $('#mPrev').onclick=()=>{ S.ui.month=addM(S.ui.month,-1); rende
     if(d.split) return setConfig(c=>c.split=d.split);
     switch(d.action){
       case 'sync': return syncNow({interactive:true});
+      case 'relogin': lsSet('hh.token',null); return startAuth(false);
       case 'pick': return pickShared();
       case 'own': { S.local.role='owner'; S.local.fileId=null; S.local.folders=null; persist(); render(); return syncNow({interactive:true}); }
       case 'invite': { const em=$('#inv').value.trim(); if(!/^\S+@\S+\.\S+$/.test(em)) return toast('Bitte eine gültige E-Mail-Adresse eintragen.'); try{ await invite(em); }catch(err){ toast(err.message); } return; }
