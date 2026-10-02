@@ -280,7 +280,7 @@ details.rrow[open]>summary{background:var(--surface-2)} details.rrow .item{paddi
 
 <script>
 'use strict';
-const APP_VERSION='2.2.1';
+const APP_VERSION='2.3.0';
 const CLIENT_ID='224489061373-shav7m8rhadfbt94lurtvo4nji5mhe8f.apps.googleusercontent.com';
 const API_KEY='AIzaSyAzKcyKQ0mJZN1guXSbB_wnmMk23N_fHbI';        // Google Picker (nur für Anika nötig)
 const PROJECT_NUMBER='224489061373'; // Google-Cloud-Projektnummer
@@ -578,7 +578,7 @@ function parseIngCsv(text){ const lines=text.replace(/\r/g,'').split('\n'); cons
 /* Standardregeln: Muster → Kategorie (Posten-ID) */
 const DEFAULT_RULES=[
   ['darl leist|darlehen','fx-kredit'],['pader ?energy|lsw energie','fx-strom'],['grundbesitzabgabe|grundsteuer','r-grundsteuer'],['beitragsservice|rundfunk','r-gez'],['hundesteuer','r-hund'],
-  ['deutsche glasfaser','fx-glasfaser'],['leasing|hyundai capital|capital bank','fx-leasing'],['kita|elternbeitrag|kindertages','fx-kita'],['familienkasse|kindergeld','inc-kg1'],
+  ['deutsche glasfaser','fx-glasfaser'],['leasing|hyundai capital|capital bank','fx-leasing'],['kita|elternbeitrag|kindertages','fx-kita'],['familienkasse|kindergeld','inc-kg1'],['finanzamt|steuererstattung|steuerrueckzahlung','inc-steuer'],['einspeis','inc-einspeis'],
   ['kraftfahrzeugsteuer|kfz steuer','r-kfzsteuer'],['muellabfuhr|abfallgebuehr','r-muell'],
   ['aslan|elli markt|edeka|rewe|aldi|lidl|kaufland|netto|penny|marktkauf|fischfeinkost|hit markt|combi|nahkauf|getraenke|tegut|globus|denns|alnatura|metzger|fleischerei|hofladen','v-lebensmittel'],
   ['jet tankstelle|tankstelle|aral|shell|esso|totalenergies|avia|raiffeisen tank|\\bstar\\b|agip|q1 ','v-tanken'],
@@ -945,6 +945,7 @@ function bind(){ $('#mPrev').onclick=()=>{ S.ui.month=addM(S.ui.month,-1); rende
   if(d) S.data={...EMPTY(),...d}; else if(SEED){ S.data={...EMPTY(),...JSON.parse(JSON.stringify(SEED))}; }
   if(l) S.local={...S.local,...l};
   if(IN_PREVIEW&&!S.local.me) S.local.me='a';
+  for(const [id,name] of [['inc-steuer','Steuerrückzahlung'],['inc-einspeis','Einspeiseentgelt']]){ if(S.data.items.length&&!S.data.items.some(i=>i.id===id)){ S.data.items.push({id,name,kind:'income',payer:'g',amount:0,every:1,upd:Date.now()}); S.local.dirty=true; persist(); } }
   { const e=S.data.items.find(i=>i.id==='a-etf'&&i.name==='ETF-Sparplan (PKV)'); if(e){ e.name='ETF-Sparplan'; e.upd=Date.now(); S.local.dirty=true; persist(); } }
   S.ui.month=importedMonths().slice(-1)[0]||addM(ym(todayISO()),-1);
   bind(); render(); if(pinSet()) lockNow();
