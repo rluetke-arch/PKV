@@ -280,7 +280,7 @@ details.rrow[open]>summary{background:var(--surface-2)} details.rrow .item{paddi
 
 <script>
 'use strict';
-const APP_VERSION='2.5.0';
+const APP_VERSION='2.6.0';
 const CLIENT_ID='224489061373-shav7m8rhadfbt94lurtvo4nji5mhe8f.apps.googleusercontent.com';
 const API_KEY='AIzaSyAzKcyKQ0mJZN1guXSbB_wnmMk23N_fHbI';        // Google Picker (nur für Anika nötig)
 const PROJECT_NUMBER='224489061373'; // Google-Cloud-Projektnummer
@@ -619,7 +619,7 @@ async function importFile(file){ let parsed=null;
   catch(e){ toast('Die Datei konnte nicht gelesen werden: '+(e.message||e)); return; }
   if(!parsed||!parsed.rows.length){ toast('Keine Umsätze gefunden. Ist das ein ING-Kontoauszug (PDF) oder ING-CSV?'); return; }
   processParsed(parsed,file.name,false); }
-function processParsed(parsed,name,fromBank){
+function processParsed(parsed,name,fromBank,auto){
   const have=new Set(S.data.tx.map(t=>t.ext).filter(Boolean));
   { let patched=0; const byExt=new Map(S.data.tx.filter(t=>t.ext&&!t.del).map(t=>[t.ext,t])); for(const raw of parsed.rows){ const c=classify(raw); const t=byExt.get(c.ext); if(t&&!t.bt){ t.bt=c.type; t.pz=(c.purpose||'').slice(0,60); t.upd=Date.now(); patched++; } } if(patched){ S.local.dirty=true; persist(); scheduleSync(1500); } }
   const all=parsed.rows.map(r=>{ const c=classify(r); if(r.ebId) c.ext='eb:'+r.ebId; return c; }); let fresh=all.filter(r=>!have.has(r.ext));
@@ -628,7 +628,9 @@ function processParsed(parsed,name,fromBank){
     for(const t of S.data.tx){ if(t.del||!t.date||t.amount==null) continue; const k=`${t.date}|${(+t.amount).toFixed(2)}|${t.dir||(t.type==='in'?'in':'out')}`; pool.set(k,(pool.get(k)||0)+1); }
     for(const r of all) if(have.has(r.ext)){ const k=key(r); if(pool.get(k)) pool.set(k,pool.get(k)-1); }
     fresh=fresh.filter(r=>{ const k=key(r); if(pool.get(k)>0){ pool.set(k,pool.get(k)-1); return false; } return true; }); }
-  if(fromBank&&!fresh.length){ toast('Keine neuen Umsätze. Alles ist schon im Haushaltsbuch.'); return; }
+  if(auto){ if(!fresh.length){ const acc=live('accounts').find(a=>a.id==='k-ing'); if(acc&&parsed.newSaldo!=null){ acc.history=(acc.history||[]).filter(h=>h.date!==parsed.stmtDate); acc.history.push({date:parsed.stmtDate,balance:parsed.newSaldo}); acc.history.sort((a,b)=>a.date.localeCompare(b.date)); acc.upd=Date.now(); } S.data.config.upd=Date.now(); changed(); return 0; }
+    return commitImport({...parsed,all,fresh,dupes:all.length-fresh.length,name},true); }
+  if(fromBank&&!fresh.length){ S.data.config.upd=Date.now(); S.local.dirty=true; persist(); scheduleSync(1500); toast('Keine neuen Umsätze. Alles ist schon im Haushaltsbuch.'); return; }
   showImport({...parsed,all,fresh,dupes:all.length-fresh.length,name}); }
 
 /* ============ ING-Abruf über Enable Banking (eigener Cloudflare-Worker) ============ */
@@ -660,17 +662,23 @@ function ebRow(x){ const amt=parseFloat(x.transaction_amount?.amount); if(!isFin
   const desc=String(x.bank_transaction_code?.description||''); const tm=desc.match(IMPORT_TYPES); const typ=tm?tm[1]:(credit?'Gutschrift':'Lastschrift');
   const date=x.booking_date||x.value_date; if(!date) return null;
   return {date,head:`${typ} ${party}`.trim(),amount:a,lines:[[].concat(x.remittance_information||[]).join(' ')],ebId:x.transaction_id||x.entry_reference||null}; }
-async function bankFetch(){ const b=bankCfg(); if(!b.account) return toast('Bitte zuerst unter „Mehr → ING-Abruf“ verbinden.');
-  if(b.validUntil&&new Date(b.validUntil)<new Date()) return toast('Die Freigabe der ING ist abgelaufen. Bitte unter „Mehr → ING-Abruf“ neu verbinden.');
+async function bankFetch(auto){ const b=bankCfg(); if(!b.account) return auto?null:toast('Bitte zuerst unter „Mehr → ING-Abruf“ verbinden.');
+  if(b.validUntil&&new Date(b.validUntil)<new Date()) return auto?null:toast('Die Freigabe der ING ist abgelaufen. Bitte unter „Mehr → ING-Abruf“ neu verbinden.');
   const li=S.data.config.lastImport; const from=(li||addM(ym(todayISO()),-1))+'-01';
-  toast('Hole Umsätze von der ING …');
+  if(!auto) toast('Hole Umsätze von der ING …');
   try{ const [t,bal]=await Promise.all([bfetch(`/transactions?account=${encodeURIComponent(b.account)}&from=${from}`),bfetch(`/balances?account=${encodeURIComponent(b.account)}`).catch(()=>null)]);
     const rows=(t.transactions||[]).filter(x=>!x.status||x.status==='BOOK').map(ebRow).filter(Boolean).sort((x,y)=>x.date.localeCompare(y.date));
     const bb=bal?.balances||[]; const B=['CLBD','ITBD','XPCD','CLAV','ITAV','OPBD'].map(k=>bb.find(x=>x.balance_type===k)).find(Boolean)||bb[0];
     S.data.config.bank={...b,lastFetch:new Date().toISOString()};
-    if(!rows.length) return toast(`Keine Umsätze seit ${fmtDate(from)}.`);
-    processParsed({rows,newSaldo:B?parseFloat(B.balance_amount.amount):null,stmtDate:B?.reference_date||todayISO()},'ING-Abruf',true); }
-  catch(e){ toast(e.message); } }
+    const parsed={rows,newSaldo:B?parseFloat(B.balance_amount.amount):null,stmtDate:B?.reference_date||todayISO()};
+    if(!rows.length){ if(auto) return processParsed(parsed,'ING-Abruf',true,true); return toast(`Keine Umsätze seit ${fmtDate(from)}.`); }
+    return processParsed(parsed,'ING-Abruf',true,auto); }
+  catch(e){ if(auto){ S.data.config.bank={...bankCfg(),lastError:e.message}; return null; } toast(e.message); } }
+const AUTO_HOURS=8; let autoRunning=false;
+async function autoBank(){ const b=bankCfg(); if(IN_PREVIEW||autoRunning||!b.account||b.auto===false||!tokenValid()||!navigator.onLine||$('#overlay')) return;
+  if(b.validUntil&&new Date(b.validUntil)<new Date()) return;
+  if(b.lastFetch&&Date.now()-new Date(b.lastFetch).getTime()<AUTO_HOURS*3600e3) return;
+  autoRunning=true; try{ await bankFetch(true); } finally{ autoRunning=false; } }
 async function bankOff(){ if(!await confirmBox('Verbindung zur ING trennen? Die Freigabe wird bei der Bank beendet. Bereits importierte Umsätze bleiben.','Trennen')) return;
   const b=bankCfg(); if(b.session){ try{ await bfetch('/session?id='+encodeURIComponent(b.session),{method:'DELETE'}); }catch(e){} }
   setConfig(c=>{ c.bank={worker:b.worker}; }); toast('ING-Verbindung getrennt.'); }
@@ -698,7 +706,7 @@ function showImport(P){ const n=S.data.config.names; const vars=live('items').fi
   body.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return;
     if(b.dataset.card){ const c=b.dataset.card; S.data.config.cards={...(S.data.config.cards||{}),[c]:b.dataset.cw}; body.querySelectorAll(`[data-card="${c}"]`).forEach(x=>x.setAttribute('aria-pressed',x===b)); for(const r of P.fresh) if(r.card===c) r.who=b.dataset.cw; }
     if(b.id==='imp-go') commitImport(P); }); }
-function commitImport(P){ const now=Date.now(); let n=0; const learned=new Map();
+function commitImport(P,auto){ const now=Date.now(); let n=0; const learned=new Map();
   for(const r of P.fresh){ if(r.learn){ const key=r.card?norm(r.party).replace(/\d+/g,'').trim():r.amtKey; if(key.length>=3) learned.set(key,r.kind==='transfer'?'__skip':(r.cat||'__in')); }
     const t={id:uid(),upd:now,by:meKey(),ext:r.ext,src:'ing',bt:r.type,pz:(r.purpose||'').slice(0,60),date:r.date,amount:Math.abs(r.amount),type:r.kind==='transfer'?'transfer':r.amount>0?'in':'out',dir:r.amount>0?'in':'out',cat:(r.kind==='in'||r.kind==='transfer'?'':r.cat)||'',who:r.who,note:r.party||r.type};
     S.data.tx.push(t); n++; }
@@ -707,7 +715,7 @@ function commitImport(P){ const now=Date.now(); let n=0; const learned=new Map()
   c.lastImport=ym(P.stmtDate||todayISO()); c.upd=now;
   if(P.newSaldo!=null){ const acc=live('accounts').find(a=>a.id==='k-ing')||live('accounts').find(a=>/ing/i.test(a.name));
     if(acc){ acc.history=(acc.history||[]).filter(h=>h.date!==P.stmtDate); acc.history.push({date:P.stmtDate||todayISO(),balance:P.newSaldo}); acc.history.sort((a,b)=>a.date.localeCompare(b.date)); acc.upd=now; } }
-  closeSheet(); if(P.stmtDate) S.ui.month=ym(P.stmtDate); changed(); toast(`${n} Umsätze übernommen`); }
+  if(!auto){ closeSheet(); if(P.stmtDate) S.ui.month=ym(P.stmtDate); } changed(); toast(auto?`${n} neue ${n===1?'Umsatz':'Umsätze'} von der ING übernommen`:`${n} Umsätze übernommen`); return n; }
 
 /* ============ Oberfläche ============ */
 const SVGA='viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
@@ -888,7 +896,8 @@ function bankSection(){ const b=bankCfg(); const exp=b.validUntil?new Date(b.val
     <div class="row-btns"><button class="btn primary" data-action="bank-connect" ${b.worker?'':'disabled'}>Mit ING verbinden</button></div>`;
   return `<dl class="kv"><dt>Konto</dt><dd>${esc(b.accName||'ING')}${b.iban?` · ${esc(b.iban.replace(/^(.{4}).*(.{4})$/,'$1 … $2'))}`:''}</dd><dt>Freigabe bis</dt><dd class="${days!=null&&days<14?'neg':''}">${exp?fmtDate(b.validUntil.slice(0,10)):'–'}</dd>${b.lastFetch?`<dt>Zuletzt abgerufen</dt><dd>${new Date(b.lastFetch).toLocaleString('de-DE',{dateStyle:'short',timeStyle:'short'})}</dd>`:''}</dl>
     ${days!=null&&days<14?`<div class="hint warn">${days<=0?'Die Freigabe ist abgelaufen.':`Die Freigabe läuft in ${days} Tagen ab.`} Tippt auf „Neu verbinden“ und bestätigt in der ING-App.</div>`:''}
-    <div class="row-btns"><button class="btn primary" data-action="bank-fetch">Umsätze abrufen</button><button class="btn" data-action="bank-connect">Neu verbinden</button></div>
+    <label class="small" style="display:flex;gap:10px;align-items:center"><input type="checkbox" id="bank-auto" ${b.auto===false?'':'checked'}> Automatisch abrufen: beim Öffnen der App, höchstens alle ${AUTO_HOURS} Stunden</label>
+    <div class="row-btns"><button class="btn primary" data-action="bank-fetch">Jetzt abrufen</button><button class="btn" data-action="bank-connect">Neu verbinden</button></div>
     <button class="btn danger ghost" data-action="bank-off">Verbindung trennen</button>
     <details class="card" style="padding:0;border:0;background:none"><summary class="small">Einstellungen</summary>${url}</details>`; }
 function viewMore(){ const c=S.data.config; const n=c.names; const kr=kredit(); const rp=rueckProjection(); const nw=netWorth(); const L=S.local;
@@ -1000,12 +1009,13 @@ function bind(){ $('#mPrev').onclick=()=>{ S.ui.month=addM(S.ui.month,-1); rende
         return download(`buchungen-${todayISO()}.csv`,'﻿'+rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(';')).join('\n'),'text/csv'); } } });
   view.addEventListener('change',e=>{ const t=e.target;
     if(t.id==='catf'){ S.ui.cat=t.value; render(); return; }
+    if(t.id==='bank-auto'){ setConfig(c=>{ c.bank={...(c.bank||{}),auto:t.checked}; }); toast(t.checked?'Automatischer Abruf ist an.':'Automatischer Abruf ist aus.'); if(t.checked) autoBank(); return; }
     if(t.dataset.c){ const path=t.dataset.c.split('.'); const numeric=!/names|date|start|worker/.test(t.dataset.c)&&t.type!=='date'&&t.type!=='month';
       const val=numeric?parseDe(t.value):t.value.trim();
       setConfig(c=>{ let o=c; for(const k of path.slice(0,-1)){ if(o[k]==null) o[k]={}; o=o[k]; } o[path[path.length-1]]=val; }); toast('Gespeichert'); return; }
     if(t.dataset.l){ S.local[t.dataset.l]=t.value.trim(); persist(); toast('Gespeichert'); } });
   view.addEventListener('toggle',e=>{ const k=e.target.dataset?.open; if(k){ e.target.open?S.ui.open.add(k):S.ui.open.delete(k); } },true);
-  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') hiddenAt=Date.now(); else { if(hiddenAt&&Date.now()-hiddenAt>60000) lockNow(); syncNow({}); pollBank(); } });
+  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') hiddenAt=Date.now(); else { if(hiddenAt&&Date.now()-hiddenAt>60000) lockNow(); syncNow({}); pollBank(); setTimeout(autoBank,4000); } });
   setInterval(()=>{ if(document.visibilityState==='visible'&&tokenValid()) syncNow({}); },90000);
   addEventListener('online',()=>syncNow({})); }
 
@@ -1024,6 +1034,7 @@ function bind(){ $('#mPrev').onclick=()=>{ S.ui.month=addM(S.ui.month,-1); rende
   const last=+(lsGet('hh.silentAt')||0);
   if(!IN_PREVIEW&&S.local.me&&!tokenValid()&&navigator.onLine&&!auth&&(S.local.fileId||S.local.role==='owner')&&Date.now()-last>10*60000){ startAuth(true); return; }
   if(lsGet('hh.ebState')) pollBank();
+  setTimeout(autoBank,5000);
   syncNow({});
 })();
 </script>
