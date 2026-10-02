@@ -1,5 +1,5 @@
 // Haushaltsbuch – Offline-Cache
-const VERSION = 'haushalt-2.4.1';
+const VERSION = 'haushalt-2.4.2';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 const CDN = /^https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|fonts\.googleapis\.com|fonts\.gstatic\.com)\//;
 
@@ -15,7 +15,7 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
   // App selbst: erst Netz (für Updates), sonst Cache
   if (url.origin === location.origin) {
-    e.respondWith(fetch(req).then(res => { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); return res; })
+    e.respondWith(fetch(req, { cache: 'no-cache' }).then(res => { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); return res; })
       .catch(() => caches.match(req, { ignoreSearch: true }).then(r => r || caches.match('index.html'))));
     return;
   }
