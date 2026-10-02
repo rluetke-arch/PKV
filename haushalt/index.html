@@ -280,7 +280,7 @@ details.rrow[open]>summary{background:var(--surface-2)} details.rrow .item{paddi
 
 <script>
 'use strict';
-const APP_VERSION='2.6.1';
+const APP_VERSION='2.6.2';
 const CLIENT_ID='224489061373-shav7m8rhadfbt94lurtvo4nji5mhe8f.apps.googleusercontent.com';
 const API_KEY='AIzaSyAzKcyKQ0mJZN1guXSbB_wnmMk23N_fHbI';        // Google Picker (nur für Anika nötig)
 const PROJECT_NUMBER='224489061373'; // Google-Cloud-Projektnummer
@@ -333,6 +333,10 @@ const active=(it,M)=>!it.del&&(!it.from||M>=it.from)&&(!it.until||M<=it.until);
 const perYear=it=>it.every===1?12:(it.months?.length||12/(it.every||12));
 const monthlyEq=it=>it.every===1?it.amount:it.amount*perYear(it)/12;
 const dueIn=(it,M)=>it.every>1&&(it.months||[]).includes(+M.slice(5));
+/* Fälligkeit aus echten Abbuchungen lernen: Posten ohne Monate bekommen den Rhythmus ab der ersten Buchung */
+function learnDue(t){ if(!t||t.type!=='out'||!t.cat) return false; const it=S.data.items.find(i=>i.id===t.cat&&!i.del); if(!it||!(it.every>1)||(it.months||[]).length) return false;
+  const m=+t.date.slice(5,7); const step=it.every; const ms=[]; for(let k=0;k<12/step;k++) ms.push(((m-1+k*step)%12)+1);
+  it.months=ms.sort((a,b)=>a-b); it.upd=Date.now(); it.by=meKey(); return true; }
 function month(M){
   const items=live('items').filter(it=>active(it,M));
   const sum=f=>items.filter(f).reduce((s,it)=>s+monthlyEq(it),0);
@@ -709,7 +713,7 @@ function showImport(P){ const n=S.data.config.names; const vars=live('items').fi
 function commitImport(P,auto){ const now=Date.now(); let n=0; const learned=new Map();
   for(const r of P.fresh){ if(r.learn){ const key=r.card?norm(r.party).replace(/\d+/g,'').trim():r.amtKey; if(key.length>=3) learned.set(key,r.kind==='transfer'?'__skip':(r.cat||'__in')); }
     const t={id:uid(),upd:now,by:meKey(),ext:r.ext,src:'ing',bt:r.type,pz:(r.purpose||'').slice(0,60),date:r.date,amount:Math.abs(r.amount),type:r.kind==='transfer'?'transfer':r.amount>0?'in':'out',dir:r.amount>0?'in':'out',cat:(r.kind==='in'||r.kind==='transfer'?'':r.cat)||'',who:r.who,note:r.party||r.type};
-    S.data.tx.push(t); n++; }
+    S.data.tx.push(t); learnDue(t); n++; }
   for(const [match,cat] of learned){ if(cat==='__in') continue; const ex=live('rules').find(x=>x.match===match); const rec={id:ex?.id||uid(),upd:now,by:meKey(),match,cat}; const i=S.data.rules.findIndex(x=>x.id===rec.id); if(i<0) S.data.rules.push(rec); else S.data.rules[i]=rec; }
   const c=S.data.config; const ks=P.fresh.find(r=>r.kreditSaldo); if(ks) c.kredit={...c.kredit,override:{amount:ks.kreditSaldo,date:ks.bookDate}};
   c.lastImport=ym(P.stmtDate||todayISO()); c.upd=now;
@@ -825,7 +829,7 @@ function openTx(id){ const ex=live('tx').find(t=>t.id===id); if(!ex) return; con
       else if(v==='__in'){ t.type='in'; t.cat=''; }
       else { const it=items.find(i=>i.id===v); t.cat=v; t.type=it.kind==='income'?'in':(wasIn&&it.kind!=='var'&&it.kind!=='fix'?'in':(wasIn?'in':'out')); }
       if($('#t-learn').checked){ const key=norm(t.note).replace(/\d+/g,'').trim(); if(key.length>=3){ const r=live('rules').find(x=>x.match===key); S.data.rules=S.data.rules.filter(x=>x!==r); S.data.rules.push({id:r?.id||uid(),upd:Date.now(),by:meKey(),match:key,cat:v==='__tr'?'__skip':v==='__in'?'__in':v}); } }
-      closeSheet(); upsert('tx',t); toast('Gespeichert'); }
+      learnDue(t); closeSheet(); upsert('tx',t); toast('Gespeichert'); }
     if(b.id==='t-del'&&await confirmBox('Diesen Umsatz ausblenden? Er zählt dann nicht mehr im Abgleich.','Ausblenden')){ closeSheet(); remove('tx',t.id); } }); }
 
 const KIND_LABEL={income:'Einnahme',fix:'Fixkosten',var:'Budget (Haushaltsgeld)',save:'Sparen'};
@@ -1027,6 +1031,7 @@ function bind(){ $('#mPrev').onclick=()=>{ S.ui.month=addM(S.ui.month,-1); rende
   if(IN_PREVIEW&&!S.local.me) S.local.me='a';
   for(const [id,name] of [['inc-steuer','Steuerrückzahlung'],['inc-einspeis','Einspeiseentgelt']]){ if(S.data.items.length&&!S.data.items.some(i=>i.id===id)){ S.data.items.push({id,name,kind:'income',payer:'g',amount:0,every:1,upd:Date.now()}); S.local.dirty=true; persist(); } }
   { const e=S.data.items.find(i=>i.id==='a-etf'&&i.name==='ETF-Sparplan (PKV)'); if(e){ e.name='ETF-Sparplan'; e.upd=Date.now(); S.local.dirty=true; persist(); } }
+  { let ch=false; for(const t of live('tx').sort((x,y)=>x.date.localeCompare(y.date))) ch=learnDue(t)||ch; if(ch){ S.local.dirty=true; persist(); } }
   S.ui.month=importedMonths().slice(-1)[0]||addM(ym(todayISO()),-1);
   bind(); render(); if(pinSet()) lockNow();
   if(auth==='ok') toast('Mit Google verbunden'); else if(auth&&auth!=='state') setSync('auth','Google-Anmeldung: '+auth);
