@@ -280,7 +280,7 @@ details.rrow[open]>summary{background:var(--surface-2)} details.rrow .item{paddi
 
 <script>
 'use strict';
-const APP_VERSION='2.2.0';
+const APP_VERSION='2.2.1';
 const CLIENT_ID='224489061373-shav7m8rhadfbt94lurtvo4nji5mhe8f.apps.googleusercontent.com';
 const API_KEY='AIzaSyAzKcyKQ0mJZN1guXSbB_wnmMk23N_fHbI';        // Google Picker (nur für Anika nötig)
 const PROJECT_NUMBER='224489061373'; // Google-Cloud-Projektnummer
@@ -713,6 +713,7 @@ function viewHome(){ const M=S.ui.month; const n=S.data.config.names; const toda
       <tr><td>${esc(n.a)}</td><td>${eur0(month(M).trA.ing+month(M).trA.rueck)}</td><td class="${r.pA.first<month(M).trA.ing+month(M).trA.rueck-1?'neg':''}">${eur0(r.pA.first)}</td></tr>
       <tr><td>${esc(n.b)}</td><td>${eur0(month(M).trB.ing+month(M).trB.rueck)}</td><td class="${r.pB.first<month(M).trB.ing+month(M).trB.rueck-1?'neg':''}">${eur0(r.pB.first)}</td></tr>
       <tr><td>Einnahmen (z. B. Kindergeld)</td><td>${eur0(r.G.inc.plan)}</td><td>${eur0(r.istIn)}</td></tr></tbody></table>
+      ${(()=>{ const ins=live('tx').filter(t=>ym(t.date)===M&&t.type==='in').sort((x,y)=>x.date.localeCompare(y.date)); return ins.length?`<details class="inact"><summary>Woraus bestehen die Einnahmen? (${ins.length})</summary><div class="list">${ins.map(txRow).join('')}</div></details>`:''; })()}
       <p class="small muted" style="margin:0">Gezählt wird nur die erste Einzahlung des Monats. Weitere Umbuchungen zwischen euren Konten bleiben hier unberücksichtigt.</p></section>`:'';
   const recHtml=rec?`<section class="card" style="display:flex;flex-direction:column;gap:12px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>Empfehlung für eure Überweisungen</b><span class="pill mut">Ø ${rec.months.length} ${rec.months.length===1?'Monat':'Monate'}</span></div>
       <table class="tbl"><thead><tr><th></th><th>bisher Plan</th><th>empfohlen</th></tr></thead><tbody>
