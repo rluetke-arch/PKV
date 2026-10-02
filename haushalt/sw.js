@@ -1,5 +1,5 @@
 // Haushaltsbuch – Offline-Cache
-const VERSION = 'haushalt-2.6.0';
+const VERSION = 'haushalt-2.6.1';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 const CDN = /^https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|fonts\.googleapis\.com|fonts\.gstatic\.com)\//;
 

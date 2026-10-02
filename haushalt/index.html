@@ -280,7 +280,7 @@ details.rrow[open]>summary{background:var(--surface-2)} details.rrow .item{paddi
 
 <script>
 'use strict';
-const APP_VERSION='2.6.0';
+const APP_VERSION='2.6.1';
 const CLIENT_ID='224489061373-shav7m8rhadfbt94lurtvo4nji5mhe8f.apps.googleusercontent.com';
 const API_KEY='AIzaSyAzKcyKQ0mJZN1guXSbB_wnmMk23N_fHbI';        // Google Picker (nur für Anika nötig)
 const PROJECT_NUMBER='224489061373'; // Google-Cloud-Projektnummer
@@ -762,7 +762,7 @@ function viewHome(){ const M=S.ui.month; const n=S.data.config.names; const toda
       <div class="stats"><div><b>${eur0(r.istCost)}</b><span>ausgegeben</span></div><div><b>${eur0(r.planCost)}</b><span>Plan</span></div><div><b>${Math.round(r.planCost?r.istCost/r.planCost*100:0)} %</b><span>vom Plan</span></div></div>
       <span class="bar" style="display:block"><i style="width:${pct}%"></i></span>${r.onceSum?`<p class="note" style="margin:0">Davon einmalig: ${eur0(r.onceSum)}. Diese Ausgaben zählen nicht in den Durchschnitt.</p>`:''}
       <p>${r.delta>=0?`Das Gemeinschaftskonto ist im ${MONTHS[+M.slice(5)-1]} um ${eur0(r.delta)} gewachsen.`:`Das Gemeinschaftskonto ist im ${MONTHS[+M.slice(5)-1]} um ${eur0(-r.delta)} geschrumpft.`} Einzahlungen und Einnahmen: ${eur0(r.pA.net+r.pB.net+r.pG.net+r.istIn)}.</p></section>`; }
-  const groups=r.has?[['Fixkosten',r.G.fix],['Haushaltsgeld',r.G.var],['Unregelmäßig (Rücklage)',r.G.rueck]]:[];
+  const groups=r.has?[['Fixkosten',r.G.fix],['Haushaltsgeld',r.G.var],['Quartals- und Jahreszahlungen',r.G.rueck]].filter(([l,x])=>x.plan||x.ist):[];
   const looseSum=r.loose.reduce((s,t)=>s+t.amount,0);
   const grpHtml=r.has?`<section class="todo"><div class="top"><b>Plan und Ist</b><span class="small muted">${MONTHS[+M.slice(5)-1]}</span></div>
     ${groups.map(([l,x])=>{ const over=x.ist>x.plan+0.5; return `<button class="trow cat" data-tab-go="tx"><span class="cmain"><span class="crow"><span>${l}</span><b class="num ${over?'neg':''}">${eur0(x.ist)}<span class="muted"> / ${eur0(x.plan)}</span></b></span><span class="meter ${over?'warn':''}"><i style="width:${x.plan?Math.min(x.ist/x.plan,1)*100:(x.ist?100:0)}%"></i></span></span></button>`; }).join('')}
@@ -800,7 +800,7 @@ function viewTx(){ const M=S.ui.month; const r=recon(M);
     return `<h2>${title}</h2><div class="list">${vis.map(x=>{ const d=x.ist-x.plan; return `<details class="rrow"><summary><span class="main"><span class="t">${esc(x.name)}</span><span class="sub">${planLbl} ${eur(x.plan)} · ${x.txs.length} Umsatz${x.txs.length===1?'':'e'}</span></span><span class="r"><span class="a num">${eur(x.ist)}</span>${Math.abs(d)>=1?`<span class="sub ${d>0?'neg':'pos'}">${d>0?'+':'−'}${eur(Math.abs(d))}</span>`:'<span class="sub pos">passt</span>'}</span></summary>${x.txs.map(txRow).join('')}</details>`; }).join('')}</div>`; };
   const tr=live('tx').filter(t=>ym(t.date)===M&&t.type==='transfer').sort((a,b)=>a.date.localeCompare(b.date));
   html+=`<div class="card"><dl class="kv"><dt>Ausgaben</dt><dd>${eur(r.istCost)}</dd><dt>Plan</dt><dd>${eur(r.planCost)}</dd><dt>Abweichung</dt><dd class="${r.istCost>r.planCost?'neg':'pos'}">${r.istCost>=r.planCost?'+':'−'}${eur(Math.abs(r.istCost-r.planCost))}</dd></dl></div>`;
-  html+=sec('Fixkosten',r.fix)+sec('Haushaltsgeld',r.var,'Budget')+sec('Unregelmäßig (Rücklage)',r.rueck,'fällig');
+  html+=sec('Fixkosten',r.fix)+sec('Haushaltsgeld',r.var,'Budget')+sec('Quartals- und Jahreszahlungen',r.rueck,'fällig');
   if(r.once.length) html+=`<h2>Einmalige Ausgaben</h2><p class="small muted" style="margin:-6px 0 0">Zählen nicht in den Durchschnitt für Budgets und Überweisungen.</p><div class="list">${r.once.map(txRow).join('')}</div>`;
   if(r.loose.length) html+=`<h2>Nicht im Plan</h2><p class="small muted" style="margin:-6px 0 0">Tippen, um eine Kategorie zu wählen. Die App merkt sich das.</p><div class="list">${r.loose.map(txRow).join('')}</div>`;
   html+=sec('Einnahmen',r.inc,'erwartet'); if(r.looseIn.length) html+=`<div class="list">${r.looseIn.map(txRow).join('')}</div>`;
