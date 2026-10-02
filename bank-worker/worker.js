@@ -125,8 +125,9 @@ async function checkGoogle(req, env) {
   const r = await fetch('https://oauth2.googleapis.com/tokeninfo?access_token=' + encodeURIComponent(tok));
   if (!r.ok) return null;
   const info = await r.json();
-  const allowed = String(env.ALLOWED_EMAILS || '').toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
-  const email = String(info.email || '').toLowerCase();
+  const normMail = m => String(m || '').trim().toLowerCase().replace(/@googlemail\.com$/, '@gmail.com');
+  const allowed = String(env.ALLOWED_EMAILS || '').split(',').map(normMail).filter(Boolean);
+  const email = normMail(info.email);
   const okClient = !env.GOOGLE_CLIENT_ID || info.azp === env.GOOGLE_CLIENT_ID || info.aud === env.GOOGLE_CLIENT_ID;
   const okMail = allowed.length > 0 && String(info.email_verified) === 'true' && allowed.includes(email);
   if (!okClient || !okMail) return null;
