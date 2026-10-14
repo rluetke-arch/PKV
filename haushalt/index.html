@@ -280,7 +280,7 @@ details.rrow[open]>summary{background:var(--surface-2)} details.rrow .item{paddi
 
 <script>
 'use strict';
-const APP_VERSION='2.6.2';
+const APP_VERSION='2.6.3';
 const CLIENT_ID='224489061373-shav7m8rhadfbt94lurtvo4nji5mhe8f.apps.googleusercontent.com';
 const API_KEY='AIzaSyAzKcyKQ0mJZN1guXSbB_wnmMk23N_fHbI';        // Google Picker (nur für Anika nötig)
 const PROJECT_NUMBER='224489061373'; // Google-Cloud-Projektnummer
@@ -1030,6 +1030,13 @@ function bind(){ $('#mPrev').onclick=()=>{ S.ui.month=addM(S.ui.month,-1); rende
   if(l) S.local={...S.local,...l};
   if(IN_PREVIEW&&!S.local.me) S.local.me='a';
   for(const [id,name] of [['inc-steuer','Steuerrückzahlung'],['inc-einspeis','Einspeiseentgelt']]){ if(S.data.items.length&&!S.data.items.some(i=>i.id===id)){ S.data.items.push({id,name,kind:'income',payer:'g',amount:0,every:1,upd:Date.now()}); S.local.dirty=true; persist(); } }
+  { // Versicherungsschein 09.10.2026: Beitrag mit Risikozuschlag, ETF 150 € bis Nov, 225 € ab Dez (nur unveränderte Startwerte anpassen)
+    const now=Date.now(); let ch=false; const it=id=>S.data.items.find(i=>i.id===id&&!i.del);
+    const pk=it('a-pkv'); if(pk&&pk.amount===941.81){ pk.amount=982.60; pk.note='KV 910,73 € (inkl. 40,79 € Risikozuschlag) + Pflege 71,87 €. Volle Abbuchung, der AG-Zuschuss steckt im Nettogehalt.'; pk.upd=now; ch=true; }
+    const ir=it('inc-rene-pkv'); if(ir&&ir.amount===4580){ ir.amount=4606; ir.upd=now; ch=true; }
+    const e=it('a-etf'); if(e&&e.amount===225&&!e.until){ e.amount=150; e.until='2026-11'; e.note='Bis die PKV startet: nur der feste Aufschlag.'; e.upd=now; ch=true;
+      if(!S.data.items.some(i=>i.id==='a-etf2')) S.data.items.push({id:'a-etf2',upd:now,name:'ETF-Sparplan',amount:225,kind:'save',payer:'a',every:1,months:[],from:'2026-12',note:'PKV-Ersparnis plus Aufschlag. Alle 2 bis 3 Jahre nach einer Beitragsanpassung prüfen.'}); }
+    if(ch){ S.local.dirty=true; persist(); } }
   { const e=S.data.items.find(i=>i.id==='a-etf'&&i.name==='ETF-Sparplan (PKV)'); if(e){ e.name='ETF-Sparplan'; e.upd=Date.now(); S.local.dirty=true; persist(); } }
   { let ch=false; for(const t of live('tx').sort((x,y)=>x.date.localeCompare(y.date))) ch=learnDue(t)||ch; if(ch){ S.local.dirty=true; persist(); } }
   S.ui.month=importedMonths().slice(-1)[0]||addM(ym(todayISO()),-1);
