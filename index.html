@@ -216,7 +216,7 @@ input[type=checkbox]{accent-color:var(--accent);width:18px;height:18px}
 <script>
 'use strict';
 /* ============ Grundlagen ============ */
-const APP_VERSION = '1.3.2';
+const APP_VERSION = '1.3.3';
 const IN_PREVIEW = (()=>{ try{ return window.top!==window.self || /claude\.ai|claudeusercontent|anthropic/.test(location.hostname); }catch(e){ return true; } })();
 const $ = (s,r=document)=>r.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -665,7 +665,7 @@ function premiumCagr(){ const h=[...S.plan.history].sort((a,b)=>a.date.localeCom
 
 function setPlanRate(r){ const m=ym(todayISO()); S.plan.current=r; S.plan.rates=S.plan.rates.filter(x=>x.from!==m); S.plan.rates.push({from:m,rate:r}); }
 function viewSparplan(){ const P=S.plan, c=planCalc(), st=S.settings; const diff=c.rate-(P.current||0);
-  const soll=depotSoll(), pr=projection67(c.rate), cagr=premiumCagr();
+  const cagr=premiumCagr();
   const status=Math.abs(diff)<5?'<span class="pill good">passt</span>':diff>0?`<span class="pill warn">um ${eur0(diff)} erhöhen</span>`:`<span class="pill mut">${eur0(-diff)} mehr als nötig</span>`;
   const pf=(path,label,unit='')=>{ const v=path.split('.').reduce((o,k)=>o[k],P); return `<div class="field"><label for="p-${path}">${label}${unit?` (${unit})`:''}</label><input id="p-${path}" data-p="${path}" inputmode="decimal" value="${v==null?'':String(v).replace('.',',')}"></div>`; };
   const row=(k,v,cls='')=>`<dt${cls?` class="${cls}"`:''}>${k}</dt><dd${cls?` class="${cls}"`:''}>${v}</dd>`;
@@ -689,15 +689,7 @@ function viewSparplan(){ const P=S.plan, c=planCalc(), st=S.settings; const diff
         ${row('Beitrag',eur0(c.premium))}${row('Arbeitgeber',`−${eur0(c.ag)}`)}${row('Vom Konto',eur0(c.eigen))}${P.net?row('Steuervorteil',`−${eur0(c.taxP)}`)+row('<b>Netto</b>',`<b>${eur0(c.netP)}</b>`):''}</dl></div>
     </div>
     <p class="small muted" style="margin:0">GKV: dein Arbeitnehmeranteil mit ${String(c.pvAnRate.toFixed(2)).replace('.',',')} % Pflege (${P.gkv.children} Kinder) und Beitragsbemessungsgrenze. PKV: Zuschuss hälftig, höchstens bis zum GKV-Höchstzuschuss. Die Abbuchung durch die SIGNAL IDUNA ist der volle Beitrag, der Zuschuss kommt mit dem Gehalt.</p>
-    <h2>Depot</h2>
-    <section class="card" style="display:flex;flex-direction:column;gap:12px">
-      <dl class="kv">${row('Eingezahlt seit '+fmtDate(P.rates.map(r=>r.from).sort()[0]+'-01').slice(3),eur0(soll.paid))}${row(`Soll-Wert heute (${P.returnPct} % Rendite)`,eur0(soll.v))}
-        ${P.depotIst!=null?row('Ist-Wert'+(P.depotDate?' ('+fmtDate(P.depotDate)+')':''),eur0(P.depotIst))+row('Abweichung',`${P.depotIst-soll.v>=0?'+':''}${eur0(P.depotIst-soll.v)}`):''}
-        ${pr?row(`Mit 67 (in ${pr.years} Jahren)`,eur0(pr.fv))+row('in heutiger Kaufkraft',eur0(pr.real)):''}</dl>
-      <div class="grid2">${pf('depotIst','Depotwert laut Trade Republic','€')}<div class="field"><label for="p-depotDate">Stand vom</label><input id="p-depotDate" type="date" data-pd="depotDate" value="${esc(P.depotDate)}"></div></div>
-      ${pr?'':'<div class="hint">Trag unter „Mehr → Tarif-Einstellungen“ dein Geburtsdatum ein, dann rechnet die App den Depotwert mit 67 aus.</div>'}
-      <p class="small muted" style="margin:0">Projektion vor Steuern, mit der empfohlenen Rate und ${P.returnPct} % Rendite im Jahr. Keine Garantie.</p>
-    </section>
+
     <details class="card" data-open="rates" ${S.ui.open.has('rates')?'open':''}><summary>Verlauf deiner Sparrate</summary>
       <div class="list">${[...P.rates].sort((a,b)=>b.from.localeCompare(a.from)).map(r=>`<div class="item"><span class="main"><span class="t">${eur0(r.rate)} im Monat</span><span class="sub">ab ${fmtDate(r.from+'-01').slice(3)}</span></span></div>`).join('')}</div></details>
     <details class="card" data-open="pkvb" ${S.ui.open.has('pkvb')?'open':''}><summary>Dein PKV-Beitrag</summary><div style="display:flex;flex-direction:column;gap:12px">
