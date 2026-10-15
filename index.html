@@ -216,7 +216,7 @@ input[type=checkbox]{accent-color:var(--accent);width:18px;height:18px}
 <script>
 'use strict';
 /* ============ Grundlagen ============ */
-const APP_VERSION = '1.3.1';
+const APP_VERSION = '1.3.2';
 const IN_PREVIEW = (()=>{ try{ return window.top!==window.self || /claude\.ai|claudeusercontent|anthropic/.test(location.hostname); }catch(e){ return true; } })();
 const $ = (s,r=document)=>r.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -376,6 +376,9 @@ async function saveMeta(id){ const map={settings:S.settings, vorsorge:{items:S.v
 function migratePlan(mp){ const P=S.plan; let ch=false;
   // 15.10.2026: René spart 150 € bis Nov und 200 € ab Dez (eigene Entscheidung)
   if(mp&&!mp.mig200){ const r=P.rates||[]; const d=r.find(x=>x.from==='2026-12'&&x.rate===225); if(d){ d.rate=200; } if(P.current===225) P.current=200; if(P.extra===170) P.extra=150; P.mig200=true; ch=true; }
+  // 15.10.2026: Sparplan 150 € ab Okt, 200 € ab Dez; BBG 2027 laut Kabinett (KV und PV 6.375 €)
+  if(mp&&!mp.mig3){ P.rates=[{from:'2026-10', rate:150},{from:'2026-12', rate:200}]; P.current=200;
+    if(P.gkv.bbgPV===7050) P.gkv.bbgPV=6375; if(P.gkv.bbg===6374) P.gkv.bbg=6375; P.mig3=true; ch=true; }
   if(!mp||!mp.pkv||mp.pkv.rz!==undefined) return ch;
   P.pkv.rz=37.15; P.pkv.rzKtg=3.64; P.pkv.ekhZuschuss=true; ch=true;
   const h=P.history||[]; if(h.length===1&&h[0].total===941.81){ P.history=[{date:'2026-12-01', total:982.60, note:'Vertragsbeginn (Versicherungsschein 09.10.2026)'}]; }
@@ -614,7 +617,7 @@ function csvExport(){ const rows=[['Behandlungsdatum','Rechnungsdatum','Anbieter
 /* ============ Sparplan (Unterschied zur GKV + fester Aufschlag) ============ */
 const DEFAULT_PLAN = {
   gross:6145, salaries:13, extra:150, current:200, net:true, withCosts:false, returnPct:5,
-  gkv:{general:14.6, zusatz:2.99, avgZusatz:2.9, bbg:6374, bbgPV:7050, pv:3.6, children:2, zahnzusatz:27.96},
+  gkv:{general:14.6, zusatz:2.99, avgZusatz:2.9, bbg:6375, bbgPV:6375, pv:3.6, children:2, zahnzusatz:27.96},
   pkv:{kv:619.16, besi:136.08, ktg:40.46, ekh:12.32, pvn:71.87, zuschlag:61.92, rz:37.15, rzKtg:3.64, ekhZuschuss:true},
   depotIst:null, depotDate:'',
   rates:[{from:'2026-10', rate:150},{from:'2026-12', rate:200}],
