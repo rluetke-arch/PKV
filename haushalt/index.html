@@ -280,7 +280,7 @@ details.rrow[open]>summary{background:var(--surface-2)} details.rrow .item{paddi
 
 <script>
 'use strict';
-const APP_VERSION='2.6.4';
+const APP_VERSION='2.7.0';
 const CLIENT_ID='224489061373-shav7m8rhadfbt94lurtvo4nji5mhe8f.apps.googleusercontent.com';
 const API_KEY='AIzaSyAzKcyKQ0mJZN1guXSbB_wnmMk23N_fHbI';        // Google Picker (nur für Anika nötig)
 const PROJECT_NUMBER='224489061373'; // Google-Cloud-Projektnummer
@@ -1037,6 +1037,13 @@ function bind(){ $('#mPrev').onclick=()=>{ S.ui.month=addM(S.ui.month,-1); rende
     const e=it('a-etf'); if(e&&e.amount===225&&!e.until){ e.amount=150; e.until='2026-11'; e.note='Bis die PKV startet: nur der feste Aufschlag.'; e.upd=now; ch=true;
       if(!S.data.items.some(i=>i.id==='a-etf2')) S.data.items.push({id:'a-etf2',upd:now,name:'ETF-Sparplan',amount:200,kind:'save',payer:'a',every:1,months:[],from:'2026-12',note:'PKV-Ersparnis plus Aufschlag. Alle 2 bis 3 Jahre nach einer Beitragsanpassung prüfen.'}); }
     const e2=it('a-etf2'); if(e2&&e2.amount===225){ e2.amount=200; e2.upd=now; ch=true; }
+    if(ch){ S.local.dirty=true; persist(); } }
+  { // Beitragsanpassung SIGNAL IDUNA zum 01.01.2027: 1.047,41 € gesamt, AG-Zuschuss +32 €
+    const now=Date.now(); let ch=false; const it=id=>S.data.items.find(i=>i.id===id&&!i.del);
+    const pk=it('a-pkv'); if(pk&&!pk.until&&!S.data.items.some(i=>i.id==='a-pkv27')){ pk.until='2026-12'; pk.upd=now;
+      S.data.items.push({id:'a-pkv27',upd:now,name:'PKV SIGNAL IDUNA',amount:1047.41,kind:'fix',payer:'a',every:1,months:[],from:'2027-01',vorab:true,note:'KV 975,54 € (nach Beitragsanpassung 2027) + Pflege 71,87 €. Volle Abbuchung, der AG-Zuschuss steckt im Nettogehalt.'}); ch=true; }
+    const ir=it('inc-rene-pkv'); if(ir&&!ir.until&&!S.data.items.some(i=>i.id==='inc-rene-pkv27')){ ir.until='2026-12'; ir.upd=now;
+      S.data.items.push({id:'inc-rene-pkv27',upd:now,name:ir.name,amount:Math.round((ir.amount+32.41)*100)/100,kind:'income',payer:'a',every:1,months:[],from:'2027-01',note:'AG-Zuschuss steigt mit der Beitragsanpassung um ca. 32 €. Nach der ersten Abrechnung 2027 prüfen.'}); ch=true; }
     if(ch){ S.local.dirty=true; persist(); } }
   { const e=S.data.items.find(i=>i.id==='a-etf'&&i.name==='ETF-Sparplan (PKV)'); if(e){ e.name='ETF-Sparplan'; e.upd=Date.now(); S.local.dirty=true; persist(); } }
   { let ch=false; for(const t of live('tx').sort((x,y)=>x.date.localeCompare(y.date))) ch=learnDue(t)||ch; if(ch){ S.local.dirty=true; persist(); } }
